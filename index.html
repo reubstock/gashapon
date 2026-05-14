@@ -2,6 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0a0f">
 <title>GASHAPON × SERIAL KILLERS</title>
 <style>
   :root {
@@ -440,6 +442,119 @@
     text-align: right;
     margin-top: 8px;
   }
+
+  /* ============================================================
+     MOBILE
+     ============================================================ */
+  @media (max-width: 720px) {
+    header {
+      padding: 12px 14px;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+    }
+    header h1 { font-size: 17px; letter-spacing: 3px; }
+    header h1 span { font-size: 10px; margin-left: 4px; letter-spacing: 1px; }
+    header .sub { font-size: 9px; letter-spacing: 1.5px; }
+
+    #rates { padding: 10px 14px 0; }
+    #rates-toggle {
+      width: 100%;
+      padding: 12px 14px;
+      letter-spacing: 3px;
+      font-size: 10px;
+    }
+    #rates-panel.open { padding: 12px 14px; max-height: 360px; }
+    .rates-table { font-size: 10px; }
+    .rates-table th, .rates-table td { padding: 6px 6px; }
+    .rates-table th { font-size: 8px; letter-spacing: 2px; }
+    .rates-table .pool { font-size: 9px; line-height: 1.4; }
+
+    #stage {
+      height: auto;
+      aspect-ratio: 4 / 5;
+      min-height: 0;
+      max-height: 78vh;
+    }
+
+    #counter {
+      top: 10px; left: 12px;
+      font-size: 9px;
+      letter-spacing: 2px;
+    }
+    #counter b { font-size: 13px; }
+
+    #info-card {
+      top: auto;
+      right: 12px;
+      left: 12px;
+      bottom: 78px;
+      width: auto;
+      max-height: 38%;
+      overflow-y: auto;
+      padding: 12px 14px;
+      font-size: 11px;
+    }
+    #info-card .name { font-size: 15px; letter-spacing: 1.5px; }
+    #info-card .alias { font-size: 10px; }
+    #info-card .stat { font-size: 10px; line-height: 1.7; }
+    #info-card .dup-stamp { font-size: 16px; padding: 3px 7px; letter-spacing: 2px; }
+    #info-card .dup-line { font-size: 12px; }
+    #info-card .rarity-pill { font-size: 8px; letter-spacing: 1.5px; padding: 2px 6px; }
+
+    #controls {
+      bottom: 14px;
+      gap: 8px;
+      width: 92%;
+      justify-content: center;
+    }
+    .btn {
+      padding: 11px 14px;
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      box-shadow: 3px 3px 0 #000;
+      flex: 1;
+      max-width: 50%;
+    }
+
+    #dossier { padding: 20px 14px 8px; }
+    .dossier-header { font-size: 10px; letter-spacing: 2px; gap: 8px; }
+    #d-current { font-size: 12px; letter-spacing: 1.5px; }
+    .dossier-form { grid-template-columns: 1fr; }
+    .dossier-form input { font-size: 13px; padding: 13px; } /* prevent iOS zoom */
+    #d-btn { padding: 13px; }
+
+    .d-file { padding: 14px 16px; font-size: 11px; }
+    .d-row { grid-template-columns: 70px 1fr; font-size: 10px; }
+    .d-narrative { font-size: 12px; line-height: 1.7; }
+
+    #collection { padding: 22px 14px 24px; }
+    #collection h2 { font-size: 11px; letter-spacing: 3px; margin-bottom: 14px; }
+    #grid { grid-template-columns: 1fr; gap: 10px; }
+    .card {
+      grid-template-columns: 64px 1fr;
+      padding: 12px;
+      min-height: 84px;
+      gap: 12px;
+    }
+    .head-svg { width: 64px; height: 64px; }
+    .card .num { font-size: 8px; top: 6px; right: 8px; }
+    .card .name { font-size: 12px; }
+    .card .alias { font-size: 9px; }
+    .card .rarity-pill { font-size: 8px; }
+    .card .wiki { font-size: 8px; letter-spacing: 1.5px; }
+    .card .dupes { font-size: 10px; bottom: 6px; left: 8px; }
+
+    footer { padding: 12px 14px 28px; font-size: 9px; }
+  }
+
+  @media (max-width: 420px) {
+    header h1 { font-size: 15px; letter-spacing: 2px; }
+    .btn { padding: 10px 10px; font-size: 10px; letter-spacing: 1px; }
+    #info-card { bottom: 70px; }
+    .card { grid-template-columns: 56px 1fr; gap: 10px; padding: 10px; }
+    .head-svg { width: 56px; height: 56px; }
+  }
 </style>
 </head>
 <body>
@@ -663,11 +778,27 @@ camera.lookAt(0, 0.1, 0);
 
 function resize() {
   const w = canvas.clientWidth, h = canvas.clientHeight;
+  const narrow = window.innerWidth < 720;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, narrow ? 1.5 : 2));
   renderer.setSize(w, h, false);
   camera.aspect = w / h;
+  // Pull camera back and widen FOV on narrower aspect ratios so both
+  // machine and toy stay framed in portrait.
+  if (camera.aspect < 0.85) {
+    camera.fov = 54;
+    camera.position.set(0.2, 1.0, 10);
+  } else if (camera.aspect < 1.25) {
+    camera.fov = 44;
+    camera.position.set(0.2, 1.1, 9);
+  } else {
+    camera.fov = 36;
+    camera.position.set(0.2, 1.2, 8.5);
+  }
+  camera.lookAt(0, 0.1, 0);
   camera.updateProjectionMatrix();
 }
 window.addEventListener('resize', resize);
+window.addEventListener('orientationchange', resize);
 resize();
 
 // Lights
