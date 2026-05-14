@@ -202,6 +202,98 @@
     text-align: center; letter-spacing: 1px;
     line-height: 1.7;
   }
+
+  /* DOSSIER section */
+  #dossier {
+    padding: 28px 24px 12px;
+    max-width: 760px;
+    margin: 0 auto;
+    border-top: 1px solid #25252e;
+  }
+  .dossier-header {
+    display: flex; gap: 14px; align-items: baseline;
+    font-size: 11px; letter-spacing: 3px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .d-label { color: var(--muted); }
+  #d-current { color: var(--accent); font-weight: 900; font-size: 14px; letter-spacing: 2px; }
+  #d-current.idle { color: var(--muted); font-weight: 400; letter-spacing: 3px; }
+
+  .dossier-form {
+    display: grid;
+    grid-template-columns: 1fr 1.4fr auto;
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  @media (max-width: 600px) {
+    .dossier-form { grid-template-columns: 1fr; }
+  }
+  .dossier-form input {
+    background: var(--bg-soft);
+    border: 1px solid #2a2a36;
+    color: var(--fg);
+    padding: 11px 13px;
+    font: 12px/1 'Courier New', ui-monospace, monospace;
+    letter-spacing: 1px;
+  }
+  .dossier-form input::placeholder { color: #4a4a55; }
+  .dossier-form input:focus { outline: none; border-color: var(--accent); }
+  .dossier-form input:disabled { opacity: 0.35; cursor: not-allowed; }
+  #d-btn { background: var(--gold); color: #000; }
+
+  .d-file {
+    border: 1px solid var(--gold);
+    background: rgba(245, 184, 0, 0.035);
+    padding: 18px 20px;
+    font-size: 12px;
+    letter-spacing: 1px;
+    line-height: 1.7;
+    margin-bottom: 14px;
+    animation: fileIn 0.4s ease-out;
+  }
+  @keyframes fileIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .d-fileheader {
+    display: flex;
+    justify-content: space-between;
+    color: var(--gold);
+    font-size: 10px;
+    letter-spacing: 3px;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px dashed #3a3a48;
+  }
+  .d-row {
+    display: grid;
+    grid-template-columns: 90px 1fr;
+    gap: 10px;
+    font-size: 11px;
+    margin-bottom: 4px;
+    word-break: break-word;
+  }
+  .d-key { color: var(--muted); letter-spacing: 2px; }
+  .d-val { color: var(--fg); }
+  .d-divider {
+    border-top: 1px dashed #3a3a48;
+    margin: 14px 0 10px;
+  }
+  .d-narrative {
+    color: var(--accent);
+    font-size: 13px;
+    font-style: italic;
+    line-height: 1.85;
+    letter-spacing: 0.5px;
+    padding: 6px 0 2px;
+  }
+
+  .card.owned { cursor: pointer; }
+  .card.active {
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 0 2px var(--accent), 4px 4px 0 #000;
+  }
 </style>
 </head>
 <body>
@@ -227,6 +319,19 @@
     <button class="btn open" id="openBtn" disabled>◎ OPEN</button>
   </div>
 </div>
+
+<section id="dossier">
+  <div class="dossier-header">
+    <span class="d-label">CURRENT SUBJECT</span>
+    <span id="d-current" class="idle">— DROP A CAPSULE —</span>
+  </div>
+  <div class="dossier-form">
+    <input id="d-name" type="text" placeholder="TARGET NAME" maxlength="80" disabled autocomplete="off">
+    <input id="d-desc" type="text" placeholder="DESCRIPTION OR LINK (OPTIONAL)" maxlength="240" disabled autocomplete="off">
+    <button id="d-btn" class="btn" disabled>► INTRODUCE TO</button>
+  </div>
+  <div id="d-output"></div>
+</section>
 
 <section id="collection">
   <h2>YOUR COLLECTION</h2>
@@ -291,6 +396,71 @@ const KILLERS = [
           shirt:0x1a1a1a, mark:'pentagram', mouth:'flat' } },
 ];
 const KILLERS_BY_ID = Object.fromEntries(KILLERS.map(k => [k.id, k]));
+
+/* ============================================================
+   INTRODUCTION TEMPLATES — euphemisms only, no graphic content
+   ============================================================ */
+const TEMPLATES = {
+  bundy: [
+    "Bundy offered {name} a ride to the bookstore. Only one of them made it home.",
+    "{name} thought they'd met a charming, well-dressed law student. Bundy thought he'd met a project.",
+    "Bundy offered to carry {name}'s books to the car. Reviews of what happened next are sparse.",
+    "{name} got in the Volkswagen. The Volkswagen left town. {name} did not return.",
+    "{name} accepted Ted's help with a sprained arm. The cast came off. {name} did not.",
+  ],
+  dahmer: [
+    "{name} came over for a drink. Dahmer made it himself.",
+    "Dahmer offered to develop {name}'s photos. The session ran long.",
+    "{name} stayed for dinner. The freezer made room.",
+    "Dahmer introduced {name} to his collection. {name} joined it.",
+    "Jeff invited {name} back to the apartment. Apartment 213 has very particular acoustics.",
+  ],
+  gacy: [
+    "Gacy invited {name} to a kids' birthday party. The basement was already decorated.",
+    "{name} got Pogo for their birthday. The crawlspace got a new tenant.",
+    "Gacy performed the rope trick for {name}. {name} did not applaud after.",
+    "{name} accepted a magic-show invitation. The trick required no volunteer to return.",
+    "John offered {name} a contracting job in Norwood Park. The foundation needed shoring up.",
+  ],
+  manson: [
+    "Manson played {name} the White Album. {name} joined the family. {name} did not leave the family.",
+    "{name} met a charismatic guru with a great record collection. The collection grew by one signed photo.",
+    "Manson sent {name} on a 'creepy crawl.' {name} did not creep back.",
+    "{name} accepted a tab and a sermon. The tab wore off. The sermon did not.",
+    "{name} was assigned a 'helter skelter' errand. The errand had no return address.",
+  ],
+  wuornos: [
+    "Aileen needed a ride. {name} gave one. The ride continued without {name}.",
+    "{name} pulled over on I-75 to help. {name}'s wallet helped more than {name} did.",
+    "Aileen got into {name}'s car at a rest stop. Only the car kept driving.",
+    "{name} thought {name} was the dangerous one in the vehicle. {name} thought wrong.",
+  ],
+  holmes: [
+    "Holmes offered {name} a room at the World's Fair Hotel. The room had no exit. Holmes filed the paperwork.",
+    "{name} checked into the Murder Castle. The insurance company received a claim. {name} did not.",
+    "Holmes gave {name} a tour. The tour included a chute. {name} was reviewed but not returned.",
+    "Henry sold {name}'s life insurance policy to three different underwriters. The numbers reconciled.",
+  ],
+  ripper: [
+    "{name} took a shortcut through Whitechapel. The fog was thick. Scotland Yard is still investigating — both ends.",
+    "{name} met a gentleman in the alley. Nobody met the gentleman after. Nobody met {name} either.",
+    "A letter arrived at the Central News Agency the next morning. It mentioned {name} by name. It was not signed.",
+    "{name} accepted a half-pint from a stranger on Hanbury Street. Last call came early.",
+  ],
+  gein: [
+    "{name} stopped at the Plainfield farm. Gein made dinner. At least Gein did.",
+    "{name} admired Gein's furniture. The compliments were taken to heart. Then to other places.",
+    "Gein offered {name} his mother's chair, his mother's coat, and his mother's outlook.",
+    "{name} visited Ed. Ed visited {name}. The visit lasted longer for one of them.",
+    "Ed showed {name} the lampshade. Ed showed {name} the bowl. Ed showed {name} the workshop.",
+  ],
+  ramirez: [
+    "Ramirez found {name}'s back window unlocked. {name} heard 'Night Prowler' once. Just once.",
+    "{name} forgot to lock the door. AC/DC was the soundtrack. {name} did not pick the song.",
+    "Ramirez climbed through {name}'s screen. The pentagram was left on the wall. {name} was not.",
+    "{name} prayed. Richard did not. The visit ended unevenly.",
+  ],
+};
 
 /* ============================================================
    SCENE
@@ -945,6 +1115,84 @@ function updateGrid() {
 }
 buildGrid();
 
+document.getElementById('grid').addEventListener('click', e => {
+  const card = e.target.closest('.card.owned');
+  if (!card) return;
+  setDossierSubject(KILLERS_BY_ID[card.dataset.id]);
+});
+
+/* ============================================================
+   DOSSIER ("INTRODUCE TO")
+   ============================================================ */
+let dossierKiller = null;
+const dEl = {
+  current: document.getElementById('d-current'),
+  name:    document.getElementById('d-name'),
+  desc:    document.getElementById('d-desc'),
+  btn:     document.getElementById('d-btn'),
+  output:  document.getElementById('d-output'),
+};
+
+function setDossierSubject(killer) {
+  dossierKiller = killer;
+  dEl.current.textContent = killer.name.toUpperCase();
+  dEl.current.classList.remove('idle');
+  dEl.name.disabled = false;
+  dEl.desc.disabled = false;
+  dEl.btn.disabled = false;
+
+  document.querySelectorAll('.card').forEach(c => {
+    c.classList.toggle('active', c.dataset.id === killer.id);
+  });
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function extractDomain(text) {
+  const m = text.match(/\bhttps?:\/\/([^\s\/]+)/i);
+  return m ? m[1].replace(/^www\./, '') : null;
+}
+
+function generateIntroduction() {
+  if (!dossierKiller) return;
+  const name = (dEl.name.value || '').trim();
+  if (!name) { dEl.name.focus(); return; }
+  const desc = (dEl.desc.value || '').trim();
+
+  const templates = TEMPLATES[dossierKiller.id] || ['{name} met a stranger. {name} did not leave the encounter.'];
+  const tpl = templates[Math.floor(Math.random() * templates.length)];
+  const narrative = tpl.replace(/\{name\}/g, name);
+
+  const domain = desc ? extractDomain(desc) : null;
+  const fileNum = String(Math.floor(Math.random() * 9000) + 1000);
+  const stamp = new Date().toISOString().split('T')[0];
+
+  dEl.output.innerHTML = `
+    <div class="d-file">
+      <div class="d-fileheader">
+        <span>CASE FILE №${fileNum}</span>
+        <span>${stamp}</span>
+      </div>
+      <div class="d-row"><span class="d-key">SUBJECT</span><span class="d-val">${escapeHtml(name)}</span></div>
+      ${desc ? `<div class="d-row"><span class="d-key">NOTES</span><span class="d-val">${escapeHtml(desc)}</span></div>` : ''}
+      ${domain ? `<div class="d-row"><span class="d-key">VIA</span><span class="d-val">${escapeHtml(domain)}</span></div>` : ''}
+      <div class="d-row"><span class="d-key">ASSIGNED</span><span class="d-val">${escapeHtml(dossierKiller.name)} — "${escapeHtml(dossierKiller.alias)}"</span></div>
+      <div class="d-divider"></div>
+      <div class="d-narrative">${escapeHtml(narrative)}</div>
+    </div>
+  ` + dEl.output.innerHTML;
+}
+
+dEl.btn.addEventListener('click', generateIntroduction);
+[dEl.name, dEl.desc].forEach(input => {
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); generateIntroduction(); }
+  });
+});
+
 /* ============================================================
    DROP SEQUENCE
    ============================================================ */
@@ -1076,6 +1324,7 @@ function openCapsule() {
         collected.add(killerId);
         updateGrid();
         showInfo(killer, killerIdx);
+        setDossierSubject(killer);
         state = 'REVEALED';
         dropBtn.disabled = activeCapsules.length <= 1;
         dropBtn.textContent = activeCapsules.length <= 1 ? '◆ SERIES COMPLETE' : '★ DROP ANOTHER';
