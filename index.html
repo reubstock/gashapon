@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GASHAPON × SERIAL KILLERS</title>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --bg-soft: #15151c;
+    --fg: #ece8de;
+    --accent: #d8233b;
+    --gold: #f5b800;
+    --muted: #6b6b75;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'Courier New', ui-monospace, monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  header {
+    padding: 16px 24px;
+    border-bottom: 1px solid #25252e;
+    display: flex; justify-content: space-between; align-items: baseline;
+    flex-wrap: wrap; gap: 8px;
+  }
+  header h1 {
+    margin: 0;
+    font-size: 22px;
+    letter-spacing: 5px;
+    color: var(--accent);
+    font-weight: 900;
+  }
+  header h1 span { color: var(--fg); letter-spacing: 2px; font-size: 14px; margin-left: 8px; }
+  header .sub {
+    font-size: 11px; letter-spacing: 2px; color: var(--muted);
+  }
+
+  #stage {
+    position: relative;
+    width: 100%;
+    height: 58vh;
+    min-height: 420px;
+    background:
+      radial-gradient(ellipse at 50% 60%, #1d1d2a 0%, #0a0a0f 70%),
+      var(--bg);
+    overflow: hidden;
+  }
+  #canvas { width: 100%; height: 100%; display: block; }
+
+  #controls {
+    position: absolute;
+    bottom: 22px; left: 50%;
+    transform: translateX(-50%);
+    display: flex; gap: 14px; z-index: 5;
+  }
+  .btn {
+    background: var(--accent);
+    color: #fff;
+    border: 2px solid #fff;
+    padding: 12px 22px;
+    font: 700 13px/1 'Courier New', monospace;
+    letter-spacing: 2px;
+    cursor: pointer;
+    box-shadow: 4px 4px 0 #000;
+    transition: transform 0.05s, box-shadow 0.05s;
+  }
+  .btn:hover:not(:disabled) { transform: translate(1px, 1px); box-shadow: 3px 3px 0 #000; }
+  .btn:active:not(:disabled) { transform: translate(4px, 4px); box-shadow: 0 0 0 #000; }
+  .btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .btn.open { background: var(--gold); color: #000; }
+
+  #info-card {
+    position: absolute;
+    top: 24px; right: 24px;
+    width: 280px;
+    background: rgba(15,15,22,0.92);
+    border: 1px solid #2a2a36;
+    padding: 16px;
+    font-size: 12px;
+    opacity: 0; transform: translateX(20px);
+    transition: opacity 0.4s, transform 0.4s;
+    pointer-events: none;
+    z-index: 6;
+  }
+  #info-card.show { opacity: 1; transform: translateX(0); }
+  #info-card .num {
+    font-size: 10px; color: var(--gold);
+    letter-spacing: 3px; margin-bottom: 8px;
+  }
+  #info-card .name {
+    color: var(--accent);
+    font-size: 18px;
+    letter-spacing: 2px;
+    margin-bottom: 4px;
+    font-weight: 900;
+  }
+  #info-card .alias {
+    color: var(--fg);
+    font-style: italic;
+    margin-bottom: 12px;
+    font-size: 11px;
+  }
+  #info-card .stat {
+    color: var(--muted);
+    letter-spacing: 1px;
+    line-height: 1.9;
+    font-size: 11px;
+  }
+
+  #counter {
+    position: absolute;
+    top: 24px; left: 24px;
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--muted);
+    z-index: 5;
+  }
+  #counter b { color: var(--gold); font-size: 14px; }
+
+  #collection {
+    padding: 28px 24px 40px;
+    border-top: 1px solid #25252e;
+  }
+  #collection h2 {
+    font-size: 13px;
+    letter-spacing: 4px;
+    color: var(--muted);
+    margin: 0 0 18px;
+    text-align: center;
+  }
+
+  #grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    max-width: 760px;
+    margin: 0 auto;
+  }
+  .card {
+    background: var(--bg-soft);
+    border: 1px solid #25252e;
+    padding: 14px;
+    position: relative;
+    min-height: 100px;
+    display: grid;
+    grid-template-columns: 36px 1fr;
+    gap: 12px;
+    align-items: center;
+    filter: grayscale(1) brightness(0.45);
+    transition: filter 0.4s, border-color 0.4s;
+  }
+  .card.owned {
+    filter: none;
+    border-color: var(--gold);
+  }
+  .card .num {
+    position: absolute; top: 6px; right: 10px;
+    font-size: 9px; color: var(--muted);
+    letter-spacing: 1px;
+  }
+  .card .swatch {
+    width: 36px; height: 36px;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    box-shadow: 2px 2px 0 #000;
+    position: relative;
+    overflow: hidden;
+  }
+  .card .swatch::after {
+    content: ''; position: absolute; left: 0; right: 0; top: 50%; bottom: 0;
+    background: var(--b);
+  }
+  .card .swatch { background: var(--a); }
+  .card .meta .name {
+    font-size: 13px; font-weight: 900;
+    color: var(--accent);
+    letter-spacing: 1px;
+    margin-bottom: 2px;
+  }
+  .card .meta .alias {
+    font-size: 10px;
+    color: var(--fg);
+    font-style: italic;
+  }
+  .card.owned::after {
+    content: '◆ OWNED';
+    position: absolute;
+    bottom: 6px; right: 8px;
+    font-size: 9px; letter-spacing: 1px;
+    color: var(--gold);
+    font-weight: 900;
+  }
+
+  footer {
+    padding: 14px 24px 28px;
+    font-size: 10px; color: var(--muted);
+    text-align: center; letter-spacing: 1px;
+    line-height: 1.7;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>GASHAPON <span>ガシャポン</span></h1>
+  <div class="sub">SERIES 01 · SERIAL KILLERS · 9 TO COLLECT</div>
+</header>
+
+<div id="stage">
+  <div id="counter">COLLECTED <b id="count">0</b> / 09</div>
+  <canvas id="canvas"></canvas>
+
+  <div id="info-card">
+    <div class="num"></div>
+    <div class="name"></div>
+    <div class="alias"></div>
+    <div class="stat"></div>
+  </div>
+
+  <div id="controls">
+    <button class="btn" id="dropBtn">★ DROP CAPSULE</button>
+    <button class="btn open" id="openBtn" disabled>◎ OPEN</button>
+  </div>
+</div>
+
+<section id="collection">
+  <h2>YOUR COLLECTION</h2>
+  <div id="grid"></div>
+</section>
+
+<footer>
+  A satirical kitsch art experiment in vinyl-toy form ·<br>
+  Stylized after iconic visual identifiers only · No graphic content depicted
+</footer>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+
+/* ============================================================
+   DATA — 9 KILLERS
+   ============================================================ */
+const KILLERS = [
+  { id:'bundy', name:'Ted Bundy', alias:'The All-American Killer', years:'1974–1978',
+    capsule:[0xc62828, 0xf5e9c4],
+    toy:{ skin:0xf5d4a8, hair:{color:0x5e3a1c, style:'parted'}, eyes:'default',
+          shirt:0xece2c0, mouth:'smirk' } },
+  { id:'dahmer', name:'Jeffrey Dahmer', alias:'The Milwaukee Cannibal', years:'1978–1991',
+    capsule:[0xfbc02d, 0x6b8e23],
+    toy:{ skin:0xf5d4a8, hair:{color:0xc9a468, style:'curtains'}, eyes:'glasses',
+          shirt:0xc46a30, shirtPattern:'plaid', mouth:'flat' } },
+  { id:'gacy', name:'John Wayne Gacy', alias:'Pogo the Clown', years:'1972–1978',
+    capsule:[0xffffff, 0xe53935],
+    toy:{ skin:0xffffff, hair:{color:0xe53935, style:'clownPuff'}, eyes:'paintTriangles',
+          shirt:0xffffff, shirtPattern:'polkadot', mouth:'clownSmile', ruff:true } },
+  { id:'manson', name:'Charles Manson', alias:'The Cult Leader', years:'1969',
+    capsule:[0x424242, 0xb71c1c],
+    toy:{ skin:0xebc59e, hair:{color:0x3b2718, style:'longBeard'}, eyes:'wild',
+          shirt:0x2a2a2a, mark:'forehead-x', mouth:'flat' } },
+  { id:'wuornos', name:'Aileen Wuornos', alias:'The Hitchhiker Killer', years:'1989–1990',
+    capsule:[0x1565c0, 0xfbc02d],
+    toy:{ skin:0xf5d4a8, hair:{color:0xc9a35e, style:'frizzy'}, eyes:'hard',
+          shirt:0x4a6fa5, shirtPattern:'denim', mouth:'flat' } },
+  { id:'holmes', name:'H.H. Holmes', alias:'Devil in the White City', years:'1891–1894',
+    capsule:[0x3e2723, 0xd7ccc8],
+    toy:{ skin:0xebc59e, hair:{color:0x1a1a1a, style:'partedShort'}, eyes:'default',
+          shirt:0x1a1a1a, mustache:true, hat:'bowler', mouth:'flat' } },
+  { id:'ripper', name:'Jack the Ripper', alias:'Whitechapel Phantom', years:'1888',
+    capsule:[0x1a1a1a, 0xc62828],
+    toy:{ skin:0x2a2a2a, hair:{color:0x1a1a1a, style:'tophat'}, eyes:'glowing',
+          shirt:0x1a1a1a, cape:true, mouth:'none' } },
+  { id:'gein', name:'Ed Gein', alias:'The Butcher of Plainfield', years:'1954–1957',
+    capsule:[0x6d4c41, 0xc62828],
+    toy:{ skin:0xead7b6, hair:{color:0x8d7053, style:'thinning'}, eyes:'gaunt',
+          shirt:0xa83333, shirtPattern:'plaid', mouth:'flat' } },
+  { id:'ramirez', name:'Richard Ramirez', alias:'The Night Stalker', years:'1984–1985',
+    capsule:[0x1a1a1a, 0xfdd835],
+    toy:{ skin:0xd1a679, hair:{color:0x111111, style:'longBlack'}, eyes:'sunglasses',
+          shirt:0x1a1a1a, mark:'pentagram', mouth:'flat' } },
+];
+const KILLERS_BY_ID = Object.fromEntries(KILLERS.map(k => [k.id, k]));
+
+/* ============================================================
+   SCENE
+   ============================================================ */
+const canvas = document.getElementById('canvas');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0x0a0a0f, 9, 22);
+
+const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 100);
+camera.position.set(0.2, 1.2, 8.5);
+camera.lookAt(0, 0.1, 0);
+
+function resize() {
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize);
+resize();
+
+// Lights
+scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+const key = new THREE.DirectionalLight(0xffffff, 1.4);
+key.position.set(4, 7, 5);
+key.castShadow = true;
+key.shadow.mapSize.set(1024, 1024);
+key.shadow.camera.near = 1; key.shadow.camera.far = 20;
+key.shadow.camera.left = -8; key.shadow.camera.right = 8;
+key.shadow.camera.top = 8; key.shadow.camera.bottom = -8;
+scene.add(key);
+const rim = new THREE.DirectionalLight(0xff5577, 0.5);
+rim.position.set(-4, 2, -3);
+scene.add(rim);
+const fill = new THREE.PointLight(0x4488ff, 0.5, 16);
+fill.position.set(-3, 1, 4);
+scene.add(fill);
+
+// Floor
+const floor = new THREE.Mesh(
+  new THREE.CircleGeometry(10, 64),
+  new THREE.MeshStandardMaterial({ color: 0x10101a, roughness: 0.85 })
+);
+floor.rotation.x = -Math.PI / 2;
+floor.position.y = -1.7;
+floor.receiveShadow = true;
+scene.add(floor);
+
+/* ============================================================
+   MACHINE
+   ============================================================ */
+const MACHINE_POS = new THREE.Vector3(-2.0, 0, 0);
+const STAGE_POS = new THREE.Vector3(2.4, -0.2, 0);
+
+function buildMachine() {
+  const g = new THREE.Group();
+  g.position.copy(MACHINE_POS);
+
+  // Body
+  const bodyMat = new THREE.MeshStandardMaterial({ color: 0xd8233b, roughness: 0.55 });
+  const body = new THREE.Mesh(new THREE.BoxGeometry(1.9, 1.5, 1.4), bodyMat);
+  body.position.y = -0.75;
+  body.castShadow = true; body.receiveShadow = true;
+  g.add(body);
+
+  // Gold trim top of body
+  const goldMat = new THREE.MeshStandardMaterial({ color: 0xfdd835, roughness: 0.4 });
+  const trim = new THREE.Mesh(new THREE.BoxGeometry(1.95, 0.08, 1.45), goldMat);
+  trim.position.y = -0.04;
+  g.add(trim);
+
+  // Front label band
+  const labelMat = new THREE.MeshBasicMaterial({ color: 0x0a0a0a });
+  const label = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.22, 0.02), labelMat);
+  label.position.set(0, -0.55, 0.71);
+  g.add(label);
+
+  // Coin slot
+  const chrome = new THREE.MeshStandardMaterial({ color: 0xc8c8c8, metalness: 0.85, roughness: 0.3 });
+  const slot = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.16, 0.05), chrome);
+  slot.position.set(-0.55, -0.85, 0.73);
+  g.add(slot);
+  const slotHole = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.02, 0.06),
+    new THREE.MeshBasicMaterial({ color: 0x000000 }));
+  slotHole.position.set(-0.55, -0.85, 0.74);
+  g.add(slotHole);
+
+  // Crank knob
+  const knob = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.1, 20), chrome);
+  knob.rotation.x = Math.PI / 2;
+  knob.position.set(0.55, -0.85, 0.78);
+  g.add(knob);
+  const handle = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.05, 0.05), chrome);
+  handle.position.set(0.62, -0.85, 0.84);
+  g.add(handle);
+
+  // Dispense tray
+  const tray = new THREE.Mesh(
+    new THREE.BoxGeometry(0.8, 0.12, 0.5),
+    new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.5 })
+  );
+  tray.position.set(0, -1.15, 0.95);
+  tray.castShadow = true;
+  g.add(tray);
+  // tray opening at front
+  const trayWall = new THREE.Mesh(
+    new THREE.BoxGeometry(0.8, 0.16, 0.04),
+    new THREE.MeshStandardMaterial({ color: 0x1a1a1a })
+  );
+  trayWall.position.set(0, -1.05, 1.18);
+  g.add(trayWall);
+
+  // Collar
+  const collar = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.72, 0.88, 0.2, 32),
+    goldMat
+  );
+  collar.position.y = 0.1;
+  g.add(collar);
+
+  // Globe (transparent)
+  const globe = new THREE.Mesh(
+    new THREE.SphereGeometry(0.98, 48, 36),
+    new THREE.MeshPhysicalMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.18,
+      roughness: 0.05,
+      transmission: 0.95,
+      thickness: 0.4,
+      ior: 1.4,
+      side: THREE.DoubleSide,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.0,
+    })
+  );
+  globe.position.y = 0.78;
+  g.add(globe);
+
+  // Top finial ring
+  const topRing = new THREE.Mesh(
+    new THREE.TorusGeometry(0.42, 0.07, 12, 32),
+    goldMat
+  );
+  topRing.position.y = 1.66;
+  topRing.rotation.x = Math.PI / 2;
+  g.add(topRing);
+  const finial = new THREE.Mesh(new THREE.SphereGeometry(0.08, 16, 12), goldMat);
+  finial.position.y = 1.78;
+  g.add(finial);
+
+  scene.add(g);
+  return { group: g };
+}
+const machine = buildMachine();
+
+/* ============================================================
+   CAPSULE
+   ============================================================ */
+function buildCapsule(colorA, colorB) {
+  const group = new THREE.Group();
+  const R = 0.18;
+  const matA = new THREE.MeshStandardMaterial({ color: colorA, roughness: 0.35 });
+  const matB = new THREE.MeshStandardMaterial({ color: colorB, roughness: 0.35 });
+
+  const top = new THREE.Mesh(
+    new THREE.SphereGeometry(R, 24, 16, 0, Math.PI * 2, 0, Math.PI / 2), matA);
+  top.castShadow = true; group.add(top);
+
+  const bot = new THREE.Mesh(
+    new THREE.SphereGeometry(R, 24, 16, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), matB);
+  bot.castShadow = true; group.add(bot);
+
+  const seam = new THREE.Mesh(
+    new THREE.TorusGeometry(R, 0.008, 6, 32),
+    new THREE.MeshStandardMaterial({ color: 0x222222 })
+  );
+  seam.rotation.x = Math.PI / 2;
+  group.add(seam);
+
+  group.userData = { top, bot, seam };
+  return group;
+}
+
+// Place capsules in globe
+const capsules = [];
+KILLERS.forEach((k, i) => {
+  const c = buildCapsule(k.capsule[0], k.capsule[1]);
+  c.userData.killerId = k.id;
+  c.userData.idx = i;
+  const phi = Math.random() * Math.PI * 2;
+  const theta = Math.acos(2 * Math.random() - 1);
+  const r = 0.3 + Math.random() * 0.4;
+  c.position.set(
+    MACHINE_POS.x + r * Math.sin(theta) * Math.cos(phi),
+    MACHINE_POS.y + 0.78 + r * Math.cos(theta) * 0.85,
+    MACHINE_POS.z + r * Math.sin(theta) * Math.sin(phi)
+  );
+  c.rotation.set(Math.random()*Math.PI*2, Math.random()*Math.PI*2, Math.random()*Math.PI*2);
+  c.userData.basePos = c.position.clone();
+  scene.add(c);
+  capsules.push(c);
+});
+
+/* ============================================================
+   TOY BUILDER
+   ============================================================ */
+function buildToy(config) {
+  const g = new THREE.Group();
+  const skinMat = new THREE.MeshStandardMaterial({ color: config.skin, roughness: 0.55 });
+  const bodyMat = new THREE.MeshStandardMaterial({ color: config.shirt, roughness: 0.65 });
+
+  // Body
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.23, 0.36, 24), bodyMat);
+  body.position.y = 0.18; body.castShadow = true;
+  g.add(body);
+
+  // Shirt patterns
+  if (config.shirtPattern === 'plaid') {
+    const lineMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.35 });
+    for (let i = 0; i < 3; i++) {
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.21, 0.006, 4, 24), lineMat);
+      ring.position.y = 0.08 + i * 0.1;
+      ring.rotation.x = Math.PI / 2;
+      g.add(ring);
+    }
+    for (let i = 0; i < 8; i++) {
+      const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.005, 0.36, 0.005), lineMat);
+      const a = (i / 8) * Math.PI * 2;
+      stripe.position.set(Math.cos(a) * 0.21, 0.18, Math.sin(a) * 0.21);
+      g.add(stripe);
+    }
+  }
+  if (config.shirtPattern === 'polkadot') {
+    const dotMat = new THREE.MeshStandardMaterial({ color: 0xe53935 });
+    for (let i = 0; i < 10; i++) {
+      const dot = new THREE.Mesh(new THREE.SphereGeometry(0.028, 10, 10), dotMat);
+      const a = (i / 10) * Math.PI * 2 + (i % 2) * 0.3;
+      dot.position.set(Math.cos(a) * 0.215, 0.08 + (i % 3) * 0.1, Math.sin(a) * 0.215);
+      g.add(dot);
+    }
+  }
+  if (config.shirtPattern === 'denim') {
+    const collar = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.225, 0.225, 0.07, 24),
+      new THREE.MeshStandardMaterial({ color: 0x2d4a78, roughness: 0.6 })
+    );
+    collar.position.y = 0.33;
+    g.add(collar);
+  }
+
+  // Arms
+  const armGeo = new THREE.CylinderGeometry(0.045, 0.045, 0.2, 12);
+  const armL = new THREE.Mesh(armGeo, bodyMat);
+  armL.position.set(-0.22, 0.18, 0);
+  armL.rotation.z = Math.PI / 2.3;
+  g.add(armL);
+  const armR = new THREE.Mesh(armGeo, bodyMat);
+  armR.position.set(0.22, 0.18, 0);
+  armR.rotation.z = -Math.PI / 2.3;
+  g.add(armR);
+
+  // Hands
+  [-0.31, 0.31].forEach(x => {
+    const hand = new THREE.Mesh(new THREE.SphereGeometry(0.05, 12, 10), skinMat);
+    hand.position.set(x, 0.1, 0);
+    g.add(hand);
+  });
+
+  // Base
+  const base = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.23, 0.23, 0.04, 24),
+    new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8 })
+  );
+  base.position.y = -0.02;
+  base.receiveShadow = true;
+  g.add(base);
+
+  // HEAD — oversized cube (Funko Pop proportions)
+  const head = new THREE.Mesh(
+    roundedBox(0.55, 0.55, 0.55, 0.08),
+    skinMat
+  );
+  head.position.y = 0.68;
+  head.castShadow = true;
+  g.add(head);
+
+  // EARS
+  if (config.toy?.ears !== false) {
+    [-0.28, 0.28].forEach(x => {
+      const ear = new THREE.Mesh(new THREE.SphereGeometry(0.04, 10, 10), skinMat);
+      ear.position.set(x, 0.66, 0);
+      ear.scale.set(0.6, 1, 1);
+      g.add(ear);
+    });
+  }
+
+  // CAPE (Ripper)
+  if (config.cape) {
+    const cape = new THREE.Mesh(
+      new THREE.ConeGeometry(0.4, 0.6, 16, 1, true, 0, Math.PI),
+      new THREE.MeshStandardMaterial({ color: 0x0a0a0a, side: THREE.DoubleSide, roughness: 0.7 })
+    );
+    cape.position.set(0, 0.22, -0.08);
+    cape.rotation.x = -0.25;
+    g.add(cape);
+  }
+
+  // RUFF (Gacy collar)
+  if (config.ruff) {
+    const ruff = new THREE.Mesh(
+      new THREE.TorusGeometry(0.2, 0.07, 8, 24),
+      new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6 })
+    );
+    ruff.position.y = 0.38;
+    ruff.rotation.x = Math.PI / 2;
+    g.add(ruff);
+    [-0.12, 0.12].forEach(x => {
+      const pom = new THREE.Mesh(new THREE.SphereGeometry(0.045, 12, 12),
+        new THREE.MeshStandardMaterial({ color: 0xe53935 }));
+      pom.position.set(x, 0.3, 0.2);
+      g.add(pom);
+    });
+  }
+
+  // HAIR
+  const hair = config.hair;
+  if (hair) {
+    const hairMat = new THREE.MeshStandardMaterial({ color: hair.color, roughness: 0.75 });
+
+    if (hair.style === 'parted') {
+      const left = new THREE.Mesh(
+        new THREE.SphereGeometry(0.2, 18, 14, 0, Math.PI * 2, 0, Math.PI / 2.1), hairMat);
+      left.position.set(-0.08, 0.92, 0); left.scale.set(1.3, 0.55, 1.2); g.add(left);
+      const right = new THREE.Mesh(
+        new THREE.SphereGeometry(0.2, 18, 14, 0, Math.PI * 2, 0, Math.PI / 2.1), hairMat);
+      right.position.set(0.08, 0.92, 0); right.scale.set(1.3, 0.55, 1.2); g.add(right);
+      // sides
+      const back = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.15, 0.45), hairMat);
+      back.position.set(0, 0.78, -0.05); g.add(back);
+    }
+    if (hair.style === 'partedShort') {
+      const top = new THREE.Mesh(
+        new THREE.SphereGeometry(0.3, 20, 14, 0, Math.PI * 2, 0, Math.PI / 2.3), hairMat);
+      top.position.y = 0.92; top.scale.set(1, 0.5, 1); g.add(top);
+    }
+    if (hair.style === 'curtains') {
+      const top = new THREE.Mesh(
+        new THREE.SphereGeometry(0.32, 20, 14, 0, Math.PI * 2, 0, Math.PI / 2), hairMat);
+      top.position.y = 0.9; top.scale.set(1, 0.65, 1); g.add(top);
+      [-0.22, 0.22].forEach(x => {
+        const strand = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.28, 0.06), hairMat);
+        strand.position.set(x, 0.75, 0.22); g.add(strand);
+      });
+    }
+    if (hair.style === 'longBeard') {
+      const top = new THREE.Mesh(
+        new THREE.SphereGeometry(0.32, 20, 14, 0, Math.PI * 2, 0, Math.PI / 2), hairMat);
+      top.position.y = 0.9; top.scale.set(1.05, 0.85, 1.05); g.add(top);
+      const back = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.45, 0.18), hairMat);
+      back.position.set(0, 0.7, -0.2); g.add(back);
+      const beard = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 12), hairMat);
+      beard.position.set(0, 0.5, 0.18); beard.scale.set(1, 0.85, 0.55); g.add(beard);
+    }
+    if (hair.style === 'longBlack') {
+      const top = new THREE.Mesh(
+        new THREE.SphereGeometry(0.32, 20, 14, 0, Math.PI * 2, 0, Math.PI / 2), hairMat);
+      top.position.y = 0.9; top.scale.set(1.05, 0.75, 1.15); g.add(top);
+      const back = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.5, 0.16), hairMat);
+      back.position.set(0, 0.62, -0.22); g.add(back);
+      [-0.27, 0.27].forEach(x => {
+        const side = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.4, 0.18), hairMat);
+        side.position.set(x, 0.65, -0.05); g.add(side);
+      });
+    }
+    if (hair.style === 'frizzy') {
+      const center = new THREE.Mesh(
+        new THREE.SphereGeometry(0.26, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2.1), hairMat);
+      center.position.y = 0.92; center.scale.set(1.15, 0.8, 1.1); g.add(center);
+      for (let i = 0; i < 10; i++) {
+        const bump = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 10), hairMat);
+        const a = (i / 10) * Math.PI * 2;
+        bump.position.set(Math.cos(a) * 0.23, 0.88 + (i % 2) * 0.06 - 0.03, Math.sin(a) * 0.23);
+        g.add(bump);
+      }
+    }
+    if (hair.style === 'clownPuff') {
+      [-0.24, 0.24].forEach(x => {
+        const puff = new THREE.Mesh(new THREE.SphereGeometry(0.17, 16, 12), hairMat);
+        puff.position.set(x, 0.7, 0); g.add(puff);
+        const puff2 = new THREE.Mesh(new THREE.SphereGeometry(0.13, 14, 10), hairMat);
+        puff2.position.set(x * 1.05, 0.85, -0.05); g.add(puff2);
+      });
+    }
+    if (hair.style === 'thinning') {
+      const wisp = new THREE.Mesh(
+        new THREE.SphereGeometry(0.18, 14, 10, 0, Math.PI * 2, 0, Math.PI / 2.8), hairMat);
+      wisp.position.set(-0.08, 0.94, -0.05); wisp.scale.set(1.2, 0.35, 1.1); g.add(wisp);
+      const wisp2 = new THREE.Mesh(
+        new THREE.SphereGeometry(0.14, 14, 10, 0, Math.PI * 2, 0, Math.PI / 2.8), hairMat);
+      wisp2.position.set(0.12, 0.94, -0.05); wisp2.scale.set(1.2, 0.35, 1.1); g.add(wisp2);
+    }
+    if (hair.style === 'tophat') {
+      const hatMat = new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0.65 });
+      const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.34, 0.025, 24), hatMat);
+      brim.position.y = 0.98; g.add(brim);
+      const top = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.32, 24), hatMat);
+      top.position.y = 1.16; g.add(top);
+      const band = new THREE.Mesh(new THREE.CylinderGeometry(0.241, 0.241, 0.04, 24),
+        new THREE.MeshStandardMaterial({ color: 0xc62828 }));
+      band.position.y = 1.02; g.add(band);
+    }
+  }
+
+  if (config.hat === 'bowler') {
+    const hatMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.6 });
+    const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.31, 0.31, 0.025, 24), hatMat);
+    brim.position.y = 0.98; g.add(brim);
+    const dome = new THREE.Mesh(
+      new THREE.SphereGeometry(0.22, 20, 14, 0, Math.PI * 2, 0, Math.PI / 2), hatMat);
+    dome.position.y = 0.98; g.add(dome);
+  }
+
+  // EYES
+  const pupilMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+  const eyeZ = 0.275;
+
+  function eye(x) {
+    const e = new THREE.Mesh(new THREE.SphereGeometry(0.04, 12, 12), pupilMat);
+    e.position.set(x, 0.7, eyeZ);
+    g.add(e);
+  }
+
+  if (['default','smile'].includes(config.eyes)) { eye(-0.11); eye(0.11); }
+  if (config.eyes === 'glasses') {
+    eye(-0.11); eye(0.11);
+    const glassMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.6 });
+    const f1 = new THREE.Mesh(new THREE.TorusGeometry(0.08, 0.012, 8, 24), glassMat);
+    f1.position.set(-0.11, 0.7, eyeZ); g.add(f1);
+    const f2 = new THREE.Mesh(new THREE.TorusGeometry(0.08, 0.012, 8, 24), glassMat);
+    f2.position.set(0.11, 0.7, eyeZ); g.add(f2);
+    const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.01, 0.01), glassMat);
+    bridge.position.set(0, 0.7, eyeZ); g.add(bridge);
+  }
+  if (config.eyes === 'sunglasses') {
+    const lensMat = new THREE.MeshPhysicalMaterial({
+      color: 0x000000, roughness: 0.1, metalness: 0.6,
+      clearcoat: 1, clearcoatRoughness: 0.05
+    });
+    const l1 = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.08, 0.02), lensMat);
+    l1.position.set(-0.11, 0.7, eyeZ); g.add(l1);
+    const l2 = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.08, 0.02), lensMat);
+    l2.position.set(0.11, 0.7, eyeZ); g.add(l2);
+  }
+  if (config.eyes === 'wild') {
+    const whiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
+    [-0.11, 0.11].forEach(x => {
+      const w = new THREE.Mesh(new THREE.SphereGeometry(0.065, 12, 12), whiteMat);
+      w.position.set(x, 0.7, eyeZ - 0.01); w.scale.z = 0.25; g.add(w);
+    });
+    eye(-0.11); eye(0.11);
+  }
+  if (config.eyes === 'hard') {
+    eye(-0.11); eye(0.11);
+    const browMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+    const b1 = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.013, 0.01), browMat);
+    b1.position.set(-0.11, 0.78, eyeZ); b1.rotation.z = 0.35; g.add(b1);
+    const b2 = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.013, 0.01), browMat);
+    b2.position.set(0.11, 0.78, eyeZ); b2.rotation.z = -0.35; g.add(b2);
+  }
+  if (config.eyes === 'gaunt') {
+    const socketMat = new THREE.MeshStandardMaterial({ color: 0x2a2a2a });
+    [-0.11, 0.11].forEach(x => {
+      const s = new THREE.Mesh(new THREE.SphereGeometry(0.055, 12, 12), socketMat);
+      s.position.set(x, 0.7, eyeZ - 0.01); s.scale.z = 0.3; g.add(s);
+    });
+    [-0.11, 0.11].forEach(x => {
+      const p = new THREE.Mesh(new THREE.SphereGeometry(0.018, 8, 8), pupilMat);
+      p.position.set(x, 0.7, eyeZ); g.add(p);
+    });
+  }
+  if (config.eyes === 'glowing') {
+    const glowMat = new THREE.MeshStandardMaterial({
+      color: 0xfff170, emissive: 0xffd700, emissiveIntensity: 2.0
+    });
+    [-0.11, 0.11].forEach(x => {
+      const e = new THREE.Mesh(new THREE.SphereGeometry(0.04, 12, 12), glowMat);
+      e.position.set(x, 0.7, eyeZ); g.add(e);
+    });
+  }
+  if (config.eyes === 'paintTriangles') {
+    eye(-0.11); eye(0.11);
+    const paintMat = new THREE.MeshBasicMaterial({ color: 0xc62828 });
+    [-0.11, 0.11].forEach(x => {
+      const t1 = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.11, 0.005), paintMat);
+      t1.position.set(x, 0.79, eyeZ); g.add(t1);
+      const t2 = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.11, 0.005), paintMat);
+      t2.position.set(x, 0.61, eyeZ); g.add(t2);
+    });
+  }
+
+  // MUSTACHE
+  if (config.mustache) {
+    const m = new THREE.Mesh(
+      new THREE.BoxGeometry(0.18, 0.035, 0.04),
+      new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.7 })
+    );
+    m.position.set(0, 0.6, eyeZ); g.add(m);
+  }
+
+  // MOUTH
+  if (['smirk','default'].includes(config.mouth)) {
+    const m = new THREE.Mesh(
+      new THREE.BoxGeometry(0.08, 0.012, 0.01),
+      new THREE.MeshBasicMaterial({ color: 0x111111 })
+    );
+    m.position.set(0, 0.57, eyeZ); g.add(m);
+  }
+  if (config.mouth === 'flat') {
+    const m = new THREE.Mesh(
+      new THREE.BoxGeometry(0.08, 0.008, 0.01),
+      new THREE.MeshBasicMaterial({ color: 0x111111 })
+    );
+    m.position.set(0, 0.57, eyeZ); g.add(m);
+  }
+  if (config.mouth === 'clownSmile') {
+    const m = new THREE.Mesh(
+      new THREE.TorusGeometry(0.09, 0.018, 8, 18, Math.PI),
+      new THREE.MeshBasicMaterial({ color: 0xc62828 })
+    );
+    m.position.set(0, 0.62, eyeZ); m.rotation.z = Math.PI; g.add(m);
+  }
+
+  // FOREHEAD MARK (Manson X)
+  if (config.mark === 'forehead-x') {
+    const markMat = new THREE.MeshBasicMaterial({ color: 0x6a0000 });
+    const b1 = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.016, 0.01), markMat);
+    b1.position.set(0, 0.84, eyeZ); b1.rotation.z = Math.PI / 4; g.add(b1);
+    const b2 = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.016, 0.01), markMat);
+    b2.position.set(0, 0.84, eyeZ); b2.rotation.z = -Math.PI / 4; g.add(b2);
+  }
+  // PENTAGRAM (Ramirez shirt)
+  if (config.mark === 'pentagram') {
+    const starMat = new THREE.MeshBasicMaterial({ color: 0xb71c1c });
+    const star = new THREE.Mesh(new THREE.RingGeometry(0.04, 0.07, 5), starMat);
+    star.position.set(0, 0.2, 0.235); g.add(star);
+    const dot = new THREE.Mesh(new THREE.CircleGeometry(0.025, 5),
+      new THREE.MeshBasicMaterial({ color: 0xb71c1c }));
+    dot.position.set(0, 0.2, 0.236); g.add(dot);
+  }
+
+  return g;
+}
+
+function roundedBox(w, h, d, r) {
+  // Simple approximation — BoxGeometry; rounding is cosmetic and not critical at this scale.
+  return new THREE.BoxGeometry(w, h, d);
+}
+
+/* ============================================================
+   TWEEN HELPERS
+   ============================================================ */
+const tweens = [];
+function tween(setter, from, to, duration, easing = easeOutQuad, onComplete) {
+  tweens.push({ setter, from, to, duration, easing, onComplete, start: performance.now() });
+}
+const easeOutQuad = t => t * (2 - t);
+const easeInQuad = t => t * t;
+const easeInOut = t => t < 0.5 ? 2*t*t : -1 + (4 - 2*t)*t;
+const easeOutBack = t => { const c = 1.70158; return 1 + (c+1)*Math.pow(t-1,3) + c*Math.pow(t-1,2); };
+const easeOutBounce = t => {
+  const n1 = 7.5625, d1 = 2.75;
+  if (t < 1/d1) return n1 * t * t;
+  if (t < 2/d1) return n1 * (t -= 1.5/d1) * t + 0.75;
+  if (t < 2.5/d1) return n1 * (t -= 2.25/d1) * t + 0.9375;
+  return n1 * (t -= 2.625/d1) * t + 0.984375;
+};
+
+function updateTweens(now) {
+  for (let i = tweens.length - 1; i >= 0; i--) {
+    const tw = tweens[i];
+    const t = Math.min(1, (now - tw.start) / tw.duration);
+    const eased = tw.easing(t);
+    if (typeof tw.from === 'number') {
+      tw.setter(tw.from + (tw.to - tw.from) * eased);
+    } else if (tw.from.isVector3) {
+      tw.setter(new THREE.Vector3().lerpVectors(tw.from, tw.to, eased));
+    }
+    if (t >= 1) { tweens.splice(i, 1); tw.onComplete && tw.onComplete(); }
+  }
+}
+
+/* ============================================================
+   STATE & UI
+   ============================================================ */
+let state = 'READY';
+const collected = new Set();
+let droppedCapsule = null;
+let revealedToy = null;
+let activeCapsules = [...capsules];
+
+const dropBtn = document.getElementById('dropBtn');
+const openBtn = document.getElementById('openBtn');
+const infoCard = document.getElementById('info-card');
+const counter = document.getElementById('count');
+
+dropBtn.addEventListener('click', drop);
+openBtn.addEventListener('click', openCapsule);
+
+function showInfo(killer, idx) {
+  infoCard.querySelector('.num').textContent = `NO. ${String(idx + 1).padStart(2, '0')} / 09`;
+  infoCard.querySelector('.name').textContent = killer.name;
+  infoCard.querySelector('.alias').textContent = '"' + killer.alias + '"';
+  infoCard.querySelector('.stat').innerHTML =
+    `ACTIVE: ${killer.years}<br>SERIES: 01<br>RARITY: COMMON`;
+  infoCard.classList.add('show');
+}
+function hideInfo() { infoCard.classList.remove('show'); }
+
+function buildGrid() {
+  const grid = document.getElementById('grid');
+  KILLERS.forEach((k, i) => {
+    const a = '#' + k.capsule[0].toString(16).padStart(6, '0');
+    const b = '#' + k.capsule[1].toString(16).padStart(6, '0');
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.dataset.id = k.id;
+    card.style.setProperty('--a', a);
+    card.style.setProperty('--b', b);
+    card.innerHTML = `
+      <span class="num">No. ${String(i + 1).padStart(2, '0')}</span>
+      <div class="swatch"></div>
+      <div class="meta">
+        <div class="name">${k.name}</div>
+        <div class="alias">"${k.alias}"</div>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+}
+function updateGrid() {
+  document.querySelectorAll('.card').forEach(c => {
+    if (collected.has(c.dataset.id)) c.classList.add('owned');
+  });
+  counter.textContent = String(collected.size).padStart(2, '0');
+}
+buildGrid();
+
+/* ============================================================
+   DROP SEQUENCE
+   ============================================================ */
+function drop() {
+  if (state === 'DROPPING' || state === 'OPENING') return;
+  if (activeCapsules.length === 0) {
+    dropBtn.textContent = '◆ SERIES COMPLETE';
+    dropBtn.disabled = true;
+    return;
+  }
+
+  // clean prior revealed toy
+  if (revealedToy) {
+    const toy = revealedToy;
+    tween(s => toy.scale.set(s, s, s), 1, 0.01, 300, easeInQuad, () => scene.remove(toy));
+    revealedToy = null;
+  }
+  hideInfo();
+
+  state = 'DROPPING';
+  dropBtn.disabled = true;
+
+  // pick uncollected preferentially
+  const uncollected = activeCapsules.filter(c => !collected.has(c.userData.killerId));
+  const pool = uncollected.length ? uncollected : activeCapsules;
+  const picked = pool[Math.floor(Math.random() * pool.length)];
+
+  const shakeStart = performance.now();
+  const shakeDuration = 1100;
+
+  function shakeFrame() {
+    const t = (performance.now() - shakeStart) / shakeDuration;
+    if (t < 1) {
+      activeCapsules.forEach(c => {
+        if (c === picked) return;
+        const base = c.userData.basePos;
+        const tt = performance.now();
+        c.position.x = base.x + Math.sin(tt * 0.012 + c.userData.idx * 2) * 0.09;
+        c.position.y = base.y + Math.sin(tt * 0.018 + c.userData.idx) * 0.06;
+        c.position.z = base.z + Math.cos(tt * 0.014 + c.userData.idx) * 0.09;
+        c.rotation.x += 0.06;
+        c.rotation.z += 0.05;
+      });
+      // picked also shakes
+      const tt = performance.now();
+      const base = picked.userData.basePos;
+      picked.position.x = base.x + Math.sin(tt * 0.020) * 0.07;
+      picked.position.y = base.y + Math.sin(tt * 0.022) * 0.05;
+      picked.position.z = base.z + Math.cos(tt * 0.018) * 0.07;
+      picked.rotation.y += 0.1;
+      requestAnimationFrame(shakeFrame);
+    } else {
+      activeCapsules.forEach(c => {
+        if (c === picked) return;
+        tween(v => c.position.copy(v), c.position.clone(), c.userData.basePos.clone(), 400);
+      });
+      animateDrop(picked);
+    }
+  }
+  shakeFrame();
+}
+
+function animateDrop(capsule) {
+  droppedCapsule = capsule;
+  const startPos = capsule.position.clone();
+  // 1. exit globe through the bottom-front opening
+  const exitPos = new THREE.Vector3(MACHINE_POS.x, MACHINE_POS.y + 0.05, MACHINE_POS.z + 0.4);
+  tween(v => capsule.position.copy(v), startPos, exitPos, 500, easeInQuad, () => {
+    // 2. slide & bounce into the tray
+    const trayPos = new THREE.Vector3(MACHINE_POS.x, MACHINE_POS.y - 1.0, MACHINE_POS.z + 0.95);
+    tween(v => capsule.position.copy(v), exitPos, trayPos, 750, easeOutBounce, () => {
+      state = 'DISPENSED';
+      openBtn.disabled = false;
+    });
+  });
+
+  // continuous spin during fall
+  const spinStart = performance.now();
+  function spinFrame() {
+    if (state !== 'DROPPING') return;
+    if (performance.now() - spinStart < 1300) {
+      capsule.rotation.x += 0.18;
+      capsule.rotation.z += 0.13;
+      requestAnimationFrame(spinFrame);
+    }
+  }
+  spinFrame();
+}
+
+/* ============================================================
+   OPEN SEQUENCE
+   ============================================================ */
+function openCapsule() {
+  if (state !== 'DISPENSED') return;
+  state = 'OPENING';
+  openBtn.disabled = true;
+
+  const capsule = droppedCapsule;
+  const killerId = capsule.userData.killerId;
+  const killer = KILLERS_BY_ID[killerId];
+  const killerIdx = KILLERS.indexOf(killer);
+
+  // glide to stage
+  const stagePos = STAGE_POS.clone();
+  tween(v => capsule.position.copy(v), capsule.position.clone(), stagePos, 700, easeInOut, () => {
+    // settle rotation
+    const startRot = { x: capsule.rotation.x, z: capsule.rotation.z };
+    tween(r => capsule.rotation.x = r, startRot.x, 0, 400);
+    tween(r => capsule.rotation.z = r, startRot.z, 0, 400, easeOutQuad, () => {
+      // pop the top
+      const top = capsule.userData.top;
+      const bot = capsule.userData.bot;
+      const seam = capsule.userData.seam;
+      seam.visible = false;
+
+      tween(y => top.position.y = y, 0, 1.6, 900, easeOutQuad);
+      tween(r => top.rotation.x = r, 0, Math.PI * 1.5, 900);
+      setTimeout(() => capsule.remove(top), 900);
+
+      // spawn the toy emerging from inside
+      const toy = buildToy(killer.toy);
+      toy.position.set(stagePos.x, stagePos.y - 0.18, stagePos.z);
+      toy.scale.set(0.01, 0.01, 0.01);
+      scene.add(toy);
+      revealedToy = toy;
+
+      tween(s => toy.scale.set(s, s, s), 0.01, 1, 900, easeOutBack);
+      tween(y => toy.position.y = y, stagePos.y - 0.18, stagePos.y - 0.05, 900, easeOutBack, () => {
+        collected.add(killerId);
+        updateGrid();
+        showInfo(killer, killerIdx);
+        state = 'REVEALED';
+        dropBtn.disabled = activeCapsules.length <= 1;
+        dropBtn.textContent = activeCapsules.length <= 1 ? '◆ SERIES COMPLETE' : '★ DROP ANOTHER';
+
+        // remove from active pool
+        activeCapsules = activeCapsules.filter(c => c !== capsule);
+
+        // fade bottom shell
+        setTimeout(() => {
+          const fadeStart = performance.now();
+          (function fadeBot(){
+            const t = (performance.now() - fadeStart) / 500;
+            if (t < 1) {
+              bot.scale.setScalar(1 - t);
+              requestAnimationFrame(fadeBot);
+            } else { scene.remove(capsule); }
+          })();
+        }, 700);
+      });
+    });
+  });
+}
+
+/* ============================================================
+   LOOP
+   ============================================================ */
+function animate() {
+  const now = performance.now();
+  updateTweens(now);
+
+  if (state === 'READY') {
+    activeCapsules.forEach((c, i) => {
+      c.position.y = c.userData.basePos.y + Math.sin(now * 0.001 + i) * 0.012;
+      c.rotation.y += 0.004;
+    });
+  }
+  if (revealedToy && state === 'REVEALED') {
+    revealedToy.rotation.y += 0.009;
+  }
+
+  renderer.render(scene, camera);
+  requestAnimationFrame(animate);
+}
+animate();
+</script>
+</body>
+</html>
