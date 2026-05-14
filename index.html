@@ -444,6 +444,105 @@
   }
 
   /* ============================================================
+     ZOOM MODAL — magnified character view
+     ============================================================ */
+  .zoom-modal {
+    position: fixed; inset: 0;
+    z-index: 100;
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .zoom-modal[hidden] { display: none; }
+  .zoom-bg {
+    position: absolute; inset: 0;
+    background: rgba(5, 5, 12, 0.86);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    cursor: pointer;
+  }
+  .zoom-card {
+    position: relative;
+    background: var(--bg-soft);
+    border: 1px solid var(--gold);
+    padding: 32px 36px 28px;
+    max-width: 460px;
+    width: 100%;
+    max-height: 92vh;
+    overflow-y: auto;
+    text-align: center;
+    box-shadow: 6px 6px 0 #000;
+    animation: zoomIn 0.28s ease-out;
+  }
+  @keyframes zoomIn {
+    from { opacity: 0; transform: scale(0.86); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .zoom-close {
+    position: absolute;
+    top: 6px; right: 10px;
+    background: none; border: none;
+    color: var(--muted);
+    font-size: 30px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 8px 12px;
+  }
+  .zoom-close:hover { color: var(--accent); }
+  .zoom-num {
+    font-size: 11px;
+    color: var(--gold);
+    letter-spacing: 4px;
+    margin-bottom: 14px;
+  }
+  .zoom-head {
+    margin: 0 auto 16px;
+    display: inline-block;
+  }
+  .zoom-head .head-svg {
+    width: 260px; height: 260px;
+  }
+  .zoom-name {
+    color: var(--accent);
+    font-size: 22px;
+    font-weight: 900;
+    letter-spacing: 3px;
+    margin-bottom: 4px;
+  }
+  .zoom-alias {
+    color: var(--fg);
+    font-style: italic;
+    font-size: 13px;
+    margin-bottom: 12px;
+  }
+  .zoom-rarity {
+    margin: 4px 0 12px;
+  }
+  .zoom-meta {
+    color: var(--muted);
+    font-size: 11px;
+    letter-spacing: 1px;
+    line-height: 1.9;
+    margin-top: 12px;
+  }
+  .zoom-wiki {
+    display: inline-block;
+    margin-top: 16px;
+    color: var(--gold);
+    text-decoration: none;
+    border-bottom: 1px dotted var(--gold);
+    font-size: 11px;
+    letter-spacing: 2px;
+    padding-bottom: 2px;
+  }
+  .zoom-wiki:hover { color: var(--fg); border-color: var(--fg); }
+  .zoom-hint {
+    margin-top: 14px;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: #4a4a55;
+  }
+
+  /* ============================================================
      MOBILE
      ============================================================ */
   @media (max-width: 720px) {
@@ -546,6 +645,11 @@
     .card .dupes { font-size: 10px; bottom: 6px; left: 8px; }
 
     footer { padding: 12px 14px 28px; font-size: 9px; }
+
+    .zoom-card { padding: 22px 18px 18px; }
+    .zoom-head .head-svg { width: 220px; height: 220px; }
+    .zoom-name { font-size: 18px; letter-spacing: 2px; }
+    .zoom-num { font-size: 10px; letter-spacing: 3px; margin-bottom: 10px; }
   }
 
   @media (max-width: 420px) {
@@ -608,6 +712,21 @@
   <h2>YOUR COLLECTION</h2>
   <div id="grid"></div>
 </section>
+
+<div id="zoom-modal" class="zoom-modal" hidden>
+  <div class="zoom-bg" data-close></div>
+  <div class="zoom-card">
+    <button class="zoom-close" type="button" aria-label="Close" data-close>×</button>
+    <div class="zoom-num"></div>
+    <div class="zoom-head"></div>
+    <div class="zoom-name"></div>
+    <div class="zoom-alias"></div>
+    <span class="zoom-rarity rarity-pill"></span>
+    <div class="zoom-meta"></div>
+    <a class="zoom-wiki" target="_blank" rel="noopener">→ WIKIPEDIA</a>
+    <div class="zoom-hint">CLICK OUTSIDE OR PRESS ESC TO CLOSE</div>
+  </div>
+</div>
 
 <footer>
   A satirical kitsch art experiment in vinyl-toy form ·<br>
@@ -1601,11 +1720,43 @@ function updateGrid() {
 buildGrid();
 
 document.getElementById('grid').addEventListener('click', e => {
-  // ignore link clicks
   if (e.target.closest('a')) return;
   const card = e.target.closest('.card.owned');
   if (!card) return;
-  setDossierSubject(KILLERS_BY_ID[card.dataset.id]);
+  const killer = KILLERS_BY_ID[card.dataset.id];
+  setDossierSubject(killer);
+  openZoomModal(killer);
+});
+
+/* ============================================================
+   ZOOM MODAL
+   ============================================================ */
+const zoomModal = document.getElementById('zoom-modal');
+function openZoomModal(killer) {
+  const r = RARITY[killer.rarity];
+  const idx = KILLERS.indexOf(killer);
+  zoomModal.querySelector('.zoom-head').innerHTML = buildHeadSVG(killer);
+  zoomModal.querySelector('.zoom-num').textContent = `NO. ${String(idx + 1).padStart(2, '0')} / 09`;
+  zoomModal.querySelector('.zoom-name').textContent = killer.name;
+  zoomModal.querySelector('.zoom-alias').textContent = '"' + killer.alias + '"';
+  const pill = zoomModal.querySelector('.zoom-rarity');
+  pill.textContent = r.label;
+  pill.style.setProperty('--rcolor', r.color);
+  zoomModal.querySelector('.zoom-meta').innerHTML =
+    `ACTIVE: ${escapeHtml(killer.years)}<br>SERIES: 01<br>PULLS: ${pulls[killer.id] || 0}`;
+  zoomModal.querySelector('.zoom-wiki').href = killer.wiki;
+  zoomModal.hidden = false;
+  document.body.style.overflow = 'hidden';
+}
+function closeZoomModal() {
+  zoomModal.hidden = true;
+  document.body.style.overflow = '';
+}
+zoomModal.addEventListener('click', e => {
+  if (e.target.closest('[data-close]')) closeZoomModal();
+});
+window.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !zoomModal.hidden) closeZoomModal();
 });
 
 /* ============================================================
@@ -1744,7 +1895,8 @@ function drop() {
   // clean prior revealed toy
   if (revealedToy) {
     const toy = revealedToy;
-    tween(s => toy.scale.set(s, s, s), 1, 0.01, 250, easeInQuad, () => scene.remove(toy));
+    const startScale = toy.scale.x;
+    tween(s => toy.scale.set(s, s, s), startScale, 0.01, 250, easeInQuad, () => scene.remove(toy));
     revealedToy = null;
   }
   hideInfo();
@@ -1854,8 +2006,8 @@ function openCapsule() {
       scene.add(toy);
       revealedToy = toy;
 
-      tween(s => toy.scale.set(s, s, s), 0.01, 1, 900, easeOutBack);
-      tween(y => toy.position.y = y, stagePos.y - 0.18, stagePos.y - 0.05, 900, easeOutBack, () => {
+      tween(s => toy.scale.set(s, s, s), 0.01, 1.8, 900, easeOutBack);
+      tween(y => toy.position.y = y, stagePos.y - 0.18, stagePos.y + 0.15, 900, easeOutBack, () => {
         pulls[killerId] = (pulls[killerId] || 0) + 1;
         const count = pulls[killerId];
         const isDuplicate = count > 1;
@@ -1905,7 +2057,7 @@ function animate() {
     });
   }
   if (revealedToy && state === 'REVEALED') {
-    revealedToy.rotation.y += 0.009;
+    revealedToy.rotation.y = Math.sin(now * 0.0008) * 0.28;
   }
 
   renderer.render(scene, camera);
