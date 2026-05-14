@@ -146,13 +146,18 @@
     border: 1px solid #25252e;
     padding: 14px;
     position: relative;
-    min-height: 100px;
+    min-height: 108px;
     display: grid;
-    grid-template-columns: 36px 1fr;
-    gap: 12px;
+    grid-template-columns: 72px 1fr;
+    gap: 14px;
     align-items: center;
     filter: grayscale(1) brightness(0.45);
     transition: filter 0.4s, border-color 0.4s;
+  }
+  .head-svg {
+    width: 72px;
+    height: 72px;
+    display: block;
   }
   .card.owned {
     filter: none;
@@ -367,19 +372,46 @@
     font-style: italic;
   }
 
-  /* drop rates table */
+  /* drop rates — collapsible button at top */
   #rates {
-    padding: 24px 24px 8px;
+    padding: 14px 24px 0;
     max-width: 760px;
     margin: 0 auto;
-    border-top: 1px solid #25252e;
-  }
-  #rates h2 {
-    font-size: 13px;
-    letter-spacing: 4px;
-    color: var(--muted);
-    margin: 0 0 16px;
     text-align: center;
+  }
+  #rates-toggle {
+    background: var(--bg-soft);
+    color: var(--gold);
+    border: 1px solid var(--gold);
+    padding: 10px 22px;
+    font: 700 11px/1 'Courier New', ui-monospace, monospace;
+    letter-spacing: 4px;
+    cursor: pointer;
+    box-shadow: 3px 3px 0 #000;
+    transition: transform 0.05s, box-shadow 0.05s, background 0.2s;
+    display: inline-block;
+  }
+  #rates-toggle:hover { background: rgba(245, 184, 0, 0.08); }
+  #rates-toggle:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #000; }
+  #rates-toggle .arrow { display: inline-block; transition: transform 0.4s; }
+  #rates-panel.open + #rates-toggle .arrow,
+  #rates-toggle.is-open .arrow { transform: rotate(180deg); }
+
+  #rates-panel {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.45s ease-in-out, opacity 0.3s, padding 0.3s;
+    opacity: 0;
+    padding: 0 18px;
+    background: var(--bg-soft);
+    border: 1px solid #25252e;
+    margin: 14px auto 0;
+    text-align: left;
+  }
+  #rates-panel.open {
+    max-height: 320px;
+    opacity: 1;
+    padding: 14px 18px;
   }
   .rates-table {
     width: 100%;
@@ -401,6 +433,13 @@
   .rates-table .rar { font-weight: 900; }
   .rates-table .pct { color: var(--gold); text-align: right; font-variant-numeric: tabular-nums; }
   .rates-table .pool { color: var(--muted); }
+  .rates-countdown {
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-align: right;
+    margin-top: 8px;
+  }
 </style>
 </head>
 <body>
@@ -409,6 +448,19 @@
   <h1>GASHAPON <span>ガシャポン</span></h1>
   <div class="sub">SERIES 01 · SERIAL KILLERS · 9 TO COLLECT</div>
 </header>
+
+<section id="rates">
+  <button id="rates-toggle" type="button"><span class="arrow">▽</span> DROP RATES</button>
+  <div id="rates-panel">
+    <table class="rates-table">
+      <thead>
+        <tr><th>RARITY</th><th>POOL</th><th style="text-align:right">PER-FIGURE ODDS</th></tr>
+      </thead>
+      <tbody id="rates-body"></tbody>
+    </table>
+    <div class="rates-countdown" id="rates-countdown"></div>
+  </div>
+</section>
 
 <div id="stage">
   <div id="counter">COLLECTED <b id="count">0</b> / 09</div>
@@ -440,16 +492,6 @@
 <section id="collection">
   <h2>YOUR COLLECTION</h2>
   <div id="grid"></div>
-</section>
-
-<section id="rates">
-  <h2>DROP RATES — SERIES 01</h2>
-  <table class="rates-table">
-    <thead>
-      <tr><th>RARITY</th><th>POOL</th><th style="text-align:right">PER-FIGURE ODDS</th></tr>
-    </thead>
-    <tbody id="rates-body"></tbody>
-  </table>
 </section>
 
 <footer>
@@ -1244,20 +1286,147 @@ function showDuplicate(killer, count) {
 }
 function hideInfo() { infoCard.classList.remove('show'); }
 
+function hex(n) { return '#' + n.toString(16).padStart(6, '0'); }
+
+function buildHeadSVG(k) {
+  const t = k.toy;
+  const skin = hex(t.skin);
+  const hairColor = t.hair ? hex(t.hair.color) : '#222';
+  const capColor = hex(k.capsule[1]);
+
+  let parts = '';
+
+  // Head (drawn before hair/hat so they overlay)
+  parts += `<circle cx="50" cy="44" r="22" fill="${skin}" stroke="#000" stroke-width="2"/>`;
+
+  // Hair / hat
+  if (t.hair?.style === 'tophat') {
+    parts += `<rect x="36" y="6" width="28" height="22" fill="#0a0a0a" stroke="#000" stroke-width="1.6"/>`;
+    parts += `<rect x="36" y="20" width="28" height="3" fill="#c62828"/>`;
+    parts += `<rect x="28" y="26" width="44" height="4" fill="#0a0a0a" stroke="#000" stroke-width="1.6"/>`;
+  } else if (t.hat === 'bowler') {
+    parts += `<path d="M 32 28 Q 50 14 68 28 Z" fill="#1a1a1a" stroke="#000" stroke-width="1.6"/>`;
+    parts += `<rect x="26" y="27" width="48" height="4" fill="#1a1a1a" stroke="#000" stroke-width="1.6"/>`;
+  } else if (t.hair) {
+    const hs = t.hair.style;
+    if (hs === 'parted') {
+      parts += `<path d="M 32 32 Q 32 22 42 22 Q 50 28 58 22 Q 68 22 68 32 Q 60 28 50 30 Q 40 28 32 32 Z" fill="${hairColor}" stroke="#000" stroke-width="1.5"/>`;
+    } else if (hs === 'partedShort') {
+      parts += `<path d="M 32 30 Q 38 22 50 26 Q 62 22 68 30 Q 60 28 50 30 Q 40 28 32 30 Z" fill="${hairColor}" stroke="#000" stroke-width="1.5"/>`;
+    } else if (hs === 'curtains') {
+      parts += `<path d="M 30 30 Q 30 16 50 14 Q 70 16 70 30 L 68 42 L 60 36 Q 50 32 40 36 L 32 42 Z" fill="${hairColor}" stroke="#000" stroke-width="1.5"/>`;
+    } else if (hs === 'longBeard') {
+      parts += `<path d="M 28 32 Q 28 14 50 12 Q 72 14 72 32 L 72 50 L 28 50 Z" fill="${hairColor}" stroke="#000" stroke-width="1.5"/>`;
+    } else if (hs === 'longBlack') {
+      parts += `<path d="M 28 30 Q 28 12 50 12 Q 72 12 72 30 L 76 66 L 70 60 Q 60 56 50 56 Q 40 56 30 60 L 24 66 Z" fill="${hairColor}" stroke="#000" stroke-width="1.5"/>`;
+    } else if (hs === 'frizzy') {
+      for (let i = 0; i <= 6; i++) {
+        const a = (i / 6) * Math.PI + Math.PI;
+        const x = 50 + Math.cos(a) * 25;
+        const y = 32 + Math.sin(a) * 16;
+        parts += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="7" fill="${hairColor}" stroke="#000" stroke-width="1.2"/>`;
+      }
+    } else if (hs === 'clownPuff') {
+      parts += `<circle cx="28" cy="42" r="11" fill="${hairColor}" stroke="#000" stroke-width="1.5"/>`;
+      parts += `<circle cx="72" cy="42" r="11" fill="${hairColor}" stroke="#000" stroke-width="1.5"/>`;
+    } else if (hs === 'thinning') {
+      parts += `<path d="M 36 28 Q 42 24 48 28 M 52 28 Q 58 24 64 28" stroke="${hairColor}" stroke-width="3.5" fill="none" stroke-linecap="round"/>`;
+    }
+  }
+
+  // Eyes
+  const eye = (cx, cy = 44) => `<circle cx="${cx}" cy="${cy}" r="2" fill="#000"/>`;
+  const eyes = t.eyes;
+  if (eyes === 'default' || eyes === 'smile') {
+    parts += eye(42) + eye(58);
+  } else if (eyes === 'glasses') {
+    parts += eye(42) + eye(58);
+    parts += `<circle cx="42" cy="44" r="6.5" fill="none" stroke="#000" stroke-width="1.5"/>`;
+    parts += `<circle cx="58" cy="44" r="6.5" fill="none" stroke="#000" stroke-width="1.5"/>`;
+    parts += `<line x1="48.5" y1="44" x2="51.5" y2="44" stroke="#000" stroke-width="1.2"/>`;
+  } else if (eyes === 'sunglasses') {
+    parts += `<rect x="33" y="40" width="15" height="8" fill="#000" stroke="#000" stroke-width="1"/>`;
+    parts += `<rect x="52" y="40" width="15" height="8" fill="#000" stroke="#000" stroke-width="1"/>`;
+    parts += `<line x1="48" y1="44" x2="52" y2="44" stroke="#000" stroke-width="1.2"/>`;
+  } else if (eyes === 'wild') {
+    parts += `<circle cx="42" cy="44" r="4" fill="#fff" stroke="#000" stroke-width="1"/>`;
+    parts += `<circle cx="58" cy="44" r="4" fill="#fff" stroke="#000" stroke-width="1"/>`;
+    parts += eye(42) + eye(58);
+  } else if (eyes === 'hard') {
+    parts += `<line x1="36" y1="40" x2="48" y2="43" stroke="#000" stroke-width="2.2" stroke-linecap="round"/>`;
+    parts += `<line x1="52" y1="43" x2="64" y2="40" stroke="#000" stroke-width="2.2" stroke-linecap="round"/>`;
+    parts += eye(42, 46) + eye(58, 46);
+  } else if (eyes === 'gaunt') {
+    parts += `<ellipse cx="42" cy="44" rx="5" ry="3.5" fill="#2a2a2a"/>`;
+    parts += `<ellipse cx="58" cy="44" rx="5" ry="3.5" fill="#2a2a2a"/>`;
+    parts += `<circle cx="42" cy="44" r="1.2" fill="#000"/>`;
+    parts += `<circle cx="58" cy="44" r="1.2" fill="#000"/>`;
+  } else if (eyes === 'glowing') {
+    parts += `<circle cx="42" cy="44" r="3.5" fill="#fff170"/>`;
+    parts += `<circle cx="58" cy="44" r="3.5" fill="#fff170"/>`;
+    parts += `<circle cx="42" cy="44" r="6" fill="#fff170" opacity="0.35"/>`;
+    parts += `<circle cx="58" cy="44" r="6" fill="#fff170" opacity="0.35"/>`;
+  } else if (eyes === 'paintTriangles') {
+    parts += eye(42) + eye(58);
+    parts += `<path d="M 38 38 L 42 30 L 46 38 Z" fill="#c62828"/>`;
+    parts += `<path d="M 54 38 L 58 30 L 62 38 Z" fill="#c62828"/>`;
+    parts += `<path d="M 38 50 L 42 58 L 46 50 Z" fill="#c62828"/>`;
+    parts += `<path d="M 54 50 L 58 58 L 62 50 Z" fill="#c62828"/>`;
+  }
+
+  // Mustache
+  if (t.mustache) {
+    parts += `<path d="M 42 52 Q 50 56 58 52 Q 56 54 50 54 Q 44 54 42 52 Z" fill="#1a1a1a" stroke="#000" stroke-width="1"/>`;
+  }
+
+  // Mouth
+  if (t.mouth === 'clownSmile') {
+    parts += `<path d="M 40 54 Q 50 62 60 54" stroke="#c62828" stroke-width="2.5" fill="none" stroke-linecap="round"/>`;
+  } else if (t.mouth && t.mouth !== 'none') {
+    parts += `<line x1="46" y1="56" x2="54" y2="56" stroke="#000" stroke-width="1.5" stroke-linecap="round"/>`;
+  }
+
+  // Beard (Manson)
+  if (t.hair?.style === 'longBeard') {
+    parts += `<path d="M 38 54 Q 50 68 62 54 Q 60 64 50 66 Q 40 64 38 54 Z" fill="${hairColor}" stroke="#000" stroke-width="1.2"/>`;
+  }
+
+  // Forehead mark
+  if (t.mark === 'forehead-x') {
+    parts += `<line x1="46" y1="28" x2="54" y2="34" stroke="#6a0000" stroke-width="2" stroke-linecap="round"/>`;
+    parts += `<line x1="46" y1="34" x2="54" y2="28" stroke="#6a0000" stroke-width="2" stroke-linecap="round"/>`;
+  }
+
+  // Ruff (Gacy)
+  let ruff = '';
+  if (t.ruff) {
+    ruff += `<path d="M 30 64 Q 40 60 50 64 Q 60 60 70 64 L 70 70 L 30 70 Z" fill="#fff" stroke="#000" stroke-width="1.5"/>`;
+    ruff += `<circle cx="44" cy="66" r="2.5" fill="#e53935"/>`;
+    ruff += `<circle cx="56" cy="66" r="2.5" fill="#e53935"/>`;
+  }
+
+  return `<svg class="head-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <!-- back rim of capsule -->
+    <ellipse cx="50" cy="70" rx="34" ry="4" fill="#000" opacity="0.55"/>
+    ${parts}
+    ${ruff}
+    <!-- front of capsule cup -->
+    <path d="M 14 70 A 36 24 0 0 0 86 70 Z" fill="${capColor}" stroke="#000" stroke-width="2"/>
+    <!-- highlight -->
+    <path d="M 22 76 Q 28 90 46 92" stroke="rgba(255,255,255,0.45)" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+  </svg>`;
+}
+
 function buildGrid() {
   const grid = document.getElementById('grid');
   KILLERS.forEach((k, i) => {
-    const a = '#' + k.capsule[0].toString(16).padStart(6, '0');
-    const b = '#' + k.capsule[1].toString(16).padStart(6, '0');
     const r = RARITY[k.rarity];
     const card = document.createElement('div');
     card.className = 'card';
     card.dataset.id = k.id;
-    card.style.setProperty('--a', a);
-    card.style.setProperty('--b', b);
     card.innerHTML = `
       <span class="num">No. ${String(i + 1).padStart(2, '0')}</span>
-      <div class="swatch"></div>
+      ${buildHeadSVG(k)}
       <div class="meta">
         <div class="name">${escapeHtml(k.name)}</div>
         <div class="alias">"${escapeHtml(k.alias)}"</div>
@@ -1378,6 +1547,44 @@ dEl.btn.addEventListener('click', generateIntroduction);
   input.addEventListener('keydown', e => {
     if (e.key === 'Enter') { e.preventDefault(); generateIntroduction(); }
   });
+});
+
+/* ============================================================
+   RATES — collapsible (8s auto-fold)
+   ============================================================ */
+const ratesBtn = document.getElementById('rates-toggle');
+const ratesPanel = document.getElementById('rates-panel');
+const ratesCountdown = document.getElementById('rates-countdown');
+let ratesTimer = null;
+let ratesTickInterval = null;
+
+function openRates() {
+  ratesPanel.classList.add('open');
+  ratesBtn.classList.add('is-open');
+  let remaining = 8;
+  ratesCountdown.textContent = `AUTO-CLOSING IN ${remaining}s`;
+  clearTimeout(ratesTimer);
+  clearInterval(ratesTickInterval);
+  ratesTickInterval = setInterval(() => {
+    remaining -= 1;
+    if (remaining > 0) {
+      ratesCountdown.textContent = `AUTO-CLOSING IN ${remaining}s`;
+    } else {
+      ratesCountdown.textContent = '';
+    }
+  }, 1000);
+  ratesTimer = setTimeout(closeRates, 8000);
+}
+function closeRates() {
+  ratesPanel.classList.remove('open');
+  ratesBtn.classList.remove('is-open');
+  ratesCountdown.textContent = '';
+  clearTimeout(ratesTimer);
+  clearInterval(ratesTickInterval);
+}
+ratesBtn.addEventListener('click', () => {
+  if (ratesPanel.classList.contains('open')) closeRates();
+  else openRates();
 });
 
 /* ============================================================
