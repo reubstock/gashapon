@@ -294,6 +294,113 @@
     border-color: var(--accent) !important;
     box-shadow: 0 0 0 2px var(--accent), 4px 4px 0 #000;
   }
+  .card .meta { min-width: 0; }
+  .card .wiki {
+    display: inline-block;
+    margin-top: 4px;
+    font-size: 9px; letter-spacing: 2px;
+    color: var(--muted);
+    text-decoration: none;
+    border-bottom: 1px dotted var(--muted);
+    padding-bottom: 1px;
+  }
+  .card.owned .wiki { color: var(--fg); border-color: var(--fg); }
+  .card .wiki:hover { color: var(--accent); border-color: var(--accent); }
+  .card .rarity-pill {
+    display: inline-block;
+    font-size: 8px;
+    letter-spacing: 2px;
+    padding: 2px 6px;
+    margin-top: 6px;
+    border: 1px solid var(--rcolor, var(--muted));
+    color: var(--rcolor, var(--muted));
+    background: rgba(0,0,0,0.3);
+  }
+  .card .dupes {
+    position: absolute;
+    bottom: 8px; left: 10px;
+    font-size: 10px;
+    letter-spacing: 1px;
+    color: var(--gold);
+    font-weight: 900;
+  }
+  .card.owned::after { display: none; }
+
+  /* info card rarity + wiki */
+  #info-card .rarity-pill {
+    display: inline-block;
+    font-size: 9px;
+    letter-spacing: 2px;
+    padding: 3px 8px;
+    margin: 4px 0 8px;
+    border: 1px solid var(--rcolor, var(--muted));
+    color: var(--rcolor, var(--muted));
+    background: rgba(0,0,0,0.3);
+  }
+  #info-card .wiki-link {
+    display: inline-block;
+    margin-top: 10px;
+    font-size: 10px; letter-spacing: 2px;
+    color: var(--gold);
+    text-decoration: none;
+    border-bottom: 1px dotted var(--gold);
+    padding-bottom: 1px;
+  }
+  #info-card .wiki-link:hover { color: var(--fg); border-color: var(--fg); }
+  #info-card.duplicate { border-color: var(--accent); }
+  #info-card .dup-stamp {
+    font-size: 22px;
+    color: var(--accent);
+    font-weight: 900;
+    letter-spacing: 3px;
+    margin-bottom: 8px;
+    transform: rotate(-3deg);
+    display: inline-block;
+    border: 3px solid var(--accent);
+    padding: 4px 10px;
+  }
+  #info-card .dup-line {
+    font-size: 13px;
+    color: var(--fg);
+    line-height: 1.5;
+    margin-top: 8px;
+    font-style: italic;
+  }
+
+  /* drop rates table */
+  #rates {
+    padding: 24px 24px 8px;
+    max-width: 760px;
+    margin: 0 auto;
+    border-top: 1px solid #25252e;
+  }
+  #rates h2 {
+    font-size: 13px;
+    letter-spacing: 4px;
+    color: var(--muted);
+    margin: 0 0 16px;
+    text-align: center;
+  }
+  .rates-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+    letter-spacing: 1px;
+  }
+  .rates-table th, .rates-table td {
+    padding: 8px 10px;
+    text-align: left;
+    border-bottom: 1px dashed #25252e;
+  }
+  .rates-table th {
+    color: var(--muted);
+    font-size: 9px;
+    letter-spacing: 3px;
+    font-weight: 400;
+  }
+  .rates-table .rar { font-weight: 900; }
+  .rates-table .pct { color: var(--gold); text-align: right; font-variant-numeric: tabular-nums; }
+  .rates-table .pool { color: var(--muted); }
 </style>
 </head>
 <body>
@@ -308,10 +415,7 @@
   <canvas id="canvas"></canvas>
 
   <div id="info-card">
-    <div class="num"></div>
-    <div class="name"></div>
-    <div class="alias"></div>
-    <div class="stat"></div>
+    <div class="body"></div>
   </div>
 
   <div id="controls">
@@ -338,6 +442,16 @@
   <div id="grid"></div>
 </section>
 
+<section id="rates">
+  <h2>DROP RATES — SERIES 01</h2>
+  <table class="rates-table">
+    <thead>
+      <tr><th>RARITY</th><th>POOL</th><th style="text-align:right">PER-FIGURE ODDS</th></tr>
+    </thead>
+    <tbody id="rates-body"></tbody>
+  </table>
+</section>
+
 <footer>
   A satirical kitsch art experiment in vinyl-toy form ·<br>
   Stylized after iconic visual identifiers only · No graphic content depicted
@@ -359,43 +473,69 @@ import * as THREE from 'three';
    ============================================================ */
 const KILLERS = [
   { id:'bundy', name:'Ted Bundy', alias:'The All-American Killer', years:'1974–1978',
+    rarity:'common', wiki:'https://en.wikipedia.org/wiki/Ted_Bundy',
     capsule:[0xc62828, 0xf5e9c4],
     toy:{ skin:0xf5d4a8, hair:{color:0x5e3a1c, style:'parted'}, eyes:'default',
           shirt:0xece2c0, mouth:'smirk' } },
   { id:'dahmer', name:'Jeffrey Dahmer', alias:'The Milwaukee Cannibal', years:'1978–1991',
+    rarity:'common', wiki:'https://en.wikipedia.org/wiki/Jeffrey_Dahmer',
     capsule:[0xfbc02d, 0x6b8e23],
     toy:{ skin:0xf5d4a8, hair:{color:0xc9a468, style:'curtains'}, eyes:'glasses',
           shirt:0xc46a30, shirtPattern:'plaid', mouth:'flat' } },
   { id:'gacy', name:'John Wayne Gacy', alias:'Pogo the Clown', years:'1972–1978',
+    rarity:'common', wiki:'https://en.wikipedia.org/wiki/John_Wayne_Gacy',
     capsule:[0xffffff, 0xe53935],
     toy:{ skin:0xffffff, hair:{color:0xe53935, style:'clownPuff'}, eyes:'paintTriangles',
           shirt:0xffffff, shirtPattern:'polkadot', mouth:'clownSmile', ruff:true } },
   { id:'manson', name:'Charles Manson', alias:'The Cult Leader', years:'1969',
+    rarity:'uncommon', wiki:'https://en.wikipedia.org/wiki/Charles_Manson',
     capsule:[0x424242, 0xb71c1c],
     toy:{ skin:0xebc59e, hair:{color:0x3b2718, style:'longBeard'}, eyes:'wild',
           shirt:0x2a2a2a, mark:'forehead-x', mouth:'flat' } },
   { id:'wuornos', name:'Aileen Wuornos', alias:'The Hitchhiker Killer', years:'1989–1990',
+    rarity:'uncommon', wiki:'https://en.wikipedia.org/wiki/Aileen_Wuornos',
     capsule:[0x1565c0, 0xfbc02d],
     toy:{ skin:0xf5d4a8, hair:{color:0xc9a35e, style:'frizzy'}, eyes:'hard',
           shirt:0x4a6fa5, shirtPattern:'denim', mouth:'flat' } },
   { id:'holmes', name:'H.H. Holmes', alias:'Devil in the White City', years:'1891–1894',
+    rarity:'rare', wiki:'https://en.wikipedia.org/wiki/H._H._Holmes',
     capsule:[0x3e2723, 0xd7ccc8],
     toy:{ skin:0xebc59e, hair:{color:0x1a1a1a, style:'partedShort'}, eyes:'default',
           shirt:0x1a1a1a, mustache:true, hat:'bowler', mouth:'flat' } },
   { id:'ripper', name:'Jack the Ripper', alias:'Whitechapel Phantom', years:'1888',
+    rarity:'legendary', wiki:'https://en.wikipedia.org/wiki/Jack_the_Ripper',
     capsule:[0x1a1a1a, 0xc62828],
     toy:{ skin:0x2a2a2a, hair:{color:0x1a1a1a, style:'tophat'}, eyes:'glowing',
           shirt:0x1a1a1a, cape:true, mouth:'none' } },
   { id:'gein', name:'Ed Gein', alias:'The Butcher of Plainfield', years:'1954–1957',
+    rarity:'rare', wiki:'https://en.wikipedia.org/wiki/Ed_Gein',
     capsule:[0x6d4c41, 0xc62828],
     toy:{ skin:0xead7b6, hair:{color:0x8d7053, style:'thinning'}, eyes:'gaunt',
           shirt:0xa83333, shirtPattern:'plaid', mouth:'flat' } },
   { id:'ramirez', name:'Richard Ramirez', alias:'The Night Stalker', years:'1984–1985',
+    rarity:'uncommon', wiki:'https://en.wikipedia.org/wiki/Richard_Ramirez',
     capsule:[0x1a1a1a, 0xfdd835],
     toy:{ skin:0xd1a679, hair:{color:0x111111, style:'longBlack'}, eyes:'sunglasses',
           shirt:0x1a1a1a, mark:'pentagram', mouth:'flat' } },
 ];
 const KILLERS_BY_ID = Object.fromEntries(KILLERS.map(k => [k.id, k]));
+
+const RARITY = {
+  common:    { label:'COMMON',    weight:20, color:'#9aa0aa' },
+  uncommon:  { label:'UNCOMMON',  weight:10, color:'#4caf50' },
+  rare:      { label:'RARE',      weight: 5, color:'#42a5f5' },
+  legendary: { label:'LEGENDARY', weight: 2, color:'#f5b800' },
+};
+
+function pickKillerByWeight() {
+  const total = KILLERS.reduce((s, k) => s + RARITY[k.rarity].weight, 0);
+  let r = Math.random() * total;
+  for (const k of KILLERS) {
+    r -= RARITY[k.rarity].weight;
+    if (r < 0) return k;
+  }
+  return KILLERS[KILLERS.length - 1];
+}
 
 /* ============================================================
    INTRODUCTION TEMPLATES — euphemisms only, no graphic content
@@ -1064,9 +1204,9 @@ function updateTweens(now) {
    ============================================================ */
 let state = 'READY';
 const collected = new Set();
+const pulls = {}; // killerId -> total times rolled
 let droppedCapsule = null;
 let revealedToy = null;
-let activeCapsules = [...capsules];
 
 const dropBtn = document.getElementById('dropBtn');
 const openBtn = document.getElementById('openBtn');
@@ -1077,11 +1217,29 @@ dropBtn.addEventListener('click', drop);
 openBtn.addEventListener('click', openCapsule);
 
 function showInfo(killer, idx) {
-  infoCard.querySelector('.num').textContent = `NO. ${String(idx + 1).padStart(2, '0')} / 09`;
-  infoCard.querySelector('.name').textContent = killer.name;
-  infoCard.querySelector('.alias').textContent = '"' + killer.alias + '"';
-  infoCard.querySelector('.stat').innerHTML =
-    `ACTIVE: ${killer.years}<br>SERIES: 01<br>RARITY: COMMON`;
+  const r = RARITY[killer.rarity];
+  infoCard.classList.remove('duplicate');
+  infoCard.querySelector('.body').innerHTML = `
+    <div class="num" style="font-size:10px;color:var(--gold);letter-spacing:3px;margin-bottom:8px">NO. ${String(idx + 1).padStart(2, '0')} / 09</div>
+    <div class="name" style="color:var(--accent);font-size:18px;letter-spacing:2px;margin-bottom:4px;font-weight:900">${escapeHtml(killer.name)}</div>
+    <div class="alias" style="color:var(--fg);font-style:italic;margin-bottom:8px;font-size:11px">"${escapeHtml(killer.alias)}"</div>
+    <span class="rarity-pill" style="--rcolor:${r.color}">${r.label}</span>
+    <div class="stat" style="color:var(--muted);letter-spacing:1px;line-height:1.9;font-size:11px;margin-top:8px">
+      ACTIVE: ${escapeHtml(killer.years)}<br>SERIES: 01
+    </div>
+    <a class="wiki-link" href="${killer.wiki}" target="_blank" rel="noopener">→ WIKIPEDIA</a>
+  `;
+  infoCard.classList.add('show');
+}
+function showDuplicate(killer, count) {
+  infoCard.classList.add('duplicate');
+  infoCard.querySelector('.body').innerHTML = `
+    <div class="dup-stamp">DUPLICATE</div>
+    <div class="name" style="color:var(--accent);font-size:18px;letter-spacing:2px;margin:8px 0 4px;font-weight:900">${escapeHtml(killer.name)}</div>
+    <div class="alias" style="color:var(--muted);font-style:italic;margin-bottom:6px;font-size:11px">"${escapeHtml(killer.alias)}"</div>
+    <div class="dup-line">The world doesn't need ${count} ${escapeHtml(killer.name)}.</div>
+    <a class="wiki-link" href="${killer.wiki}" target="_blank" rel="noopener">→ WIKIPEDIA</a>
+  `;
   infoCard.classList.add('show');
 }
 function hideInfo() { infoCard.classList.remove('show'); }
@@ -1091,6 +1249,7 @@ function buildGrid() {
   KILLERS.forEach((k, i) => {
     const a = '#' + k.capsule[0].toString(16).padStart(6, '0');
     const b = '#' + k.capsule[1].toString(16).padStart(6, '0');
+    const r = RARITY[k.rarity];
     const card = document.createElement('div');
     card.className = 'card';
     card.dataset.id = k.id;
@@ -1100,22 +1259,50 @@ function buildGrid() {
       <span class="num">No. ${String(i + 1).padStart(2, '0')}</span>
       <div class="swatch"></div>
       <div class="meta">
-        <div class="name">${k.name}</div>
-        <div class="alias">"${k.alias}"</div>
+        <div class="name">${escapeHtml(k.name)}</div>
+        <div class="alias">"${escapeHtml(k.alias)}"</div>
+        <span class="rarity-pill" style="--rcolor:${r.color}">${r.label}</span><br>
+        <a class="wiki-link wiki" href="${k.wiki}" target="_blank" rel="noopener">→ WIKIPEDIA</a>
       </div>
+      <span class="dupes" data-id="${k.id}"></span>
     `;
     grid.appendChild(card);
+  });
+  // also build rates table
+  const ratesBody = document.getElementById('rates-body');
+  const total = KILLERS.reduce((s, k) => s + RARITY[k.rarity].weight, 0);
+  const order = ['common', 'uncommon', 'rare', 'legendary'];
+  order.forEach(rkey => {
+    const r = RARITY[rkey];
+    const inPool = KILLERS.filter(k => k.rarity === rkey);
+    const pct = ((r.weight / total) * 100).toFixed(1);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="rar" style="color:${r.color}">${r.label}</td>
+      <td class="pool">${inPool.map(k => k.name).join(', ')}</td>
+      <td class="pct">${pct}% each</td>
+    `;
+    ratesBody.appendChild(tr);
   });
 }
 function updateGrid() {
   document.querySelectorAll('.card').forEach(c => {
     if (collected.has(c.dataset.id)) c.classList.add('owned');
+    const id = c.dataset.id;
+    const dupes = document.querySelector(`.dupes[data-id="${id}"]`);
+    if (dupes) {
+      const n = pulls[id] || 0;
+      dupes.textContent = n > 1 ? `×${n}` : '';
+    }
   });
   counter.textContent = String(collected.size).padStart(2, '0');
 }
+
 buildGrid();
 
 document.getElementById('grid').addEventListener('click', e => {
+  // ignore link clicks
+  if (e.target.closest('a')) return;
   const card = e.target.closest('.card.owned');
   if (!card) return;
   setDossierSubject(KILLERS_BY_ID[card.dataset.id]);
@@ -1196,18 +1383,30 @@ dEl.btn.addEventListener('click', generateIntroduction);
 /* ============================================================
    DROP SEQUENCE
    ============================================================ */
+function restoreCapsuleToGlobe(capsule) {
+  if (!capsule) return;
+  const { top, bot, seam, basePos } = capsule.userData;
+  if (!top.parent) capsule.add(top);
+  top.position.set(0, 0, 0);
+  top.rotation.set(0, 0, 0);
+  bot.scale.setScalar(1);
+  seam.visible = true;
+  // tween back to globe position
+  tween(v => capsule.position.copy(v), capsule.position.clone(), basePos.clone(), 350);
+}
+
 function drop() {
   if (state === 'DROPPING' || state === 'OPENING') return;
-  if (activeCapsules.length === 0) {
-    dropBtn.textContent = '◆ SERIES COMPLETE';
-    dropBtn.disabled = true;
-    return;
-  }
 
+  // restore previously dispensed capsule back to globe
+  if (droppedCapsule) {
+    restoreCapsuleToGlobe(droppedCapsule);
+    droppedCapsule = null;
+  }
   // clean prior revealed toy
   if (revealedToy) {
     const toy = revealedToy;
-    tween(s => toy.scale.set(s, s, s), 1, 0.01, 300, easeInQuad, () => scene.remove(toy));
+    tween(s => toy.scale.set(s, s, s), 1, 0.01, 250, easeInQuad, () => scene.remove(toy));
     revealedToy = null;
   }
   hideInfo();
@@ -1215,10 +1414,9 @@ function drop() {
   state = 'DROPPING';
   dropBtn.disabled = true;
 
-  // pick uncollected preferentially
-  const uncollected = activeCapsules.filter(c => !collected.has(c.userData.killerId));
-  const pool = uncollected.length ? uncollected : activeCapsules;
-  const picked = pool[Math.floor(Math.random() * pool.length)];
+  // weighted random pick by rarity
+  const chosenKiller = pickKillerByWeight();
+  const picked = capsules.find(c => c.userData.killerId === chosenKiller.id);
 
   const shakeStart = performance.now();
   const shakeDuration = 1100;
@@ -1226,7 +1424,7 @@ function drop() {
   function shakeFrame() {
     const t = (performance.now() - shakeStart) / shakeDuration;
     if (t < 1) {
-      activeCapsules.forEach(c => {
+      capsules.forEach(c => {
         if (c === picked) return;
         const base = c.userData.basePos;
         const tt = performance.now();
@@ -1236,7 +1434,6 @@ function drop() {
         c.rotation.x += 0.06;
         c.rotation.z += 0.05;
       });
-      // picked also shakes
       const tt = performance.now();
       const base = picked.userData.basePos;
       picked.position.x = base.x + Math.sin(tt * 0.020) * 0.07;
@@ -1245,7 +1442,7 @@ function drop() {
       picked.rotation.y += 0.1;
       requestAnimationFrame(shakeFrame);
     } else {
-      activeCapsules.forEach(c => {
+      capsules.forEach(c => {
         if (c === picked) return;
         tween(v => c.position.copy(v), c.position.clone(), c.userData.basePos.clone(), 400);
       });
@@ -1321,18 +1518,24 @@ function openCapsule() {
 
       tween(s => toy.scale.set(s, s, s), 0.01, 1, 900, easeOutBack);
       tween(y => toy.position.y = y, stagePos.y - 0.18, stagePos.y - 0.05, 900, easeOutBack, () => {
-        collected.add(killerId);
+        pulls[killerId] = (pulls[killerId] || 0) + 1;
+        const count = pulls[killerId];
+        const isDuplicate = count > 1;
+
+        if (isDuplicate) {
+          showDuplicate(killer, count);
+        } else {
+          collected.add(killerId);
+          showInfo(killer, killerIdx);
+          setDossierSubject(killer);
+        }
         updateGrid();
-        showInfo(killer, killerIdx);
-        setDossierSubject(killer);
+
         state = 'REVEALED';
-        dropBtn.disabled = activeCapsules.length <= 1;
-        dropBtn.textContent = activeCapsules.length <= 1 ? '◆ SERIES COMPLETE' : '★ DROP ANOTHER';
+        dropBtn.disabled = false;
+        dropBtn.textContent = collected.size >= KILLERS.length ? '★ DROP AGAIN (ALL COLLECTED)' : '★ DROP ANOTHER';
 
-        // remove from active pool
-        activeCapsules = activeCapsules.filter(c => c !== capsule);
-
-        // fade bottom shell
+        // fade bottom shell (kept in scene, just invisible until next drop restores it)
         setTimeout(() => {
           const fadeStart = performance.now();
           (function fadeBot(){
@@ -1340,7 +1543,9 @@ function openCapsule() {
             if (t < 1) {
               bot.scale.setScalar(1 - t);
               requestAnimationFrame(fadeBot);
-            } else { scene.remove(capsule); }
+            } else {
+              bot.scale.setScalar(0);
+            }
           })();
         }, 700);
       });
@@ -1356,7 +1561,7 @@ function animate() {
   updateTweens(now);
 
   if (state === 'READY') {
-    activeCapsules.forEach((c, i) => {
+    capsules.forEach((c, i) => {
       c.position.y = c.userData.basePos.y + Math.sin(now * 0.001 + i) * 0.012;
       c.rotation.y += 0.004;
     });
